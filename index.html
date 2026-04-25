@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plateforme de Mini-Jeux | Undercover</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <h1>🕵️‍♂️ Undercover</h1>
+
+        <div id="setup-screen" class="screen active">
+            <p>Ajoutez au moins 3 joueurs :</p>
+            <div class="input-group">
+                <input type="text" id="player-name" placeholder="Nom du joueur">
+                <button onclick="addPlayer()">Ajouter</button>
+            </div>
+            <ul id="player-list"></ul>
+            <button onclick="startGame()" id="start-btn" disabled>Lancer la partie</button>
+        </div>
+
+        <div id="turn-screen" class="screen">
+            <h2 id="turn-title">Au tour de...</h2>
+            <p>Assurez-vous que personne d'autre ne regarde l'écran ! 👀</p>
+            <button onclick="showWord()">Voir mon mot</button>
+        </div>
+
+        <div id="word-screen" class="screen">
+            <h2>Ton mot est :</h2>
+            <h1 id="secret-word" class="word-display">???</h1>
+            <button onclick="nextTurn()">J'ai bien mémorisé, cacher le mot</button>
+        </div>
+
+        <div id="debate-screen" class="screen">
+            <h2>🗣️ Place au débat !</h2>
+            <p>Tout le monde a vu son mot. Essayez de démasquer l'Undercover !</p>
+            <button onclick="location.reload()">Rejouer</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
