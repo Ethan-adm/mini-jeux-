@@ -4,10 +4,10 @@ const themes = {
         ["Plage", "Piscine"], ["Guitare", "Piano"], ["Chien", "Loup"]
     ],
     "anime": [
-        ["Naruto", "Sasuke"], ["Luffy", "Zoro"]
+        ["Naruto", "Sasuke"], ["Luffy", "Zoro"], ["Goku", "Vegeta"]
     ],
     "transports": [
-        ["Avion", "Hélicoptère"], ["Vélo", "Trotinette"]
+        ["Avion", "Hélicoptère"], ["Vélo", "Trotinette"], ["Bus", "Tramway"]
     ]
 };
 
@@ -17,6 +17,7 @@ let currentPlayerIndex = 0;
 let civWordGlobal = "";
 let roundCount = 1;
 let currentVotedPlayer = null;
+let canUndercoverGuess = false;
 
 function openGame(gameName) {
     if (gameName === 'undercover') {
@@ -24,11 +25,10 @@ function openGame(gameName) {
     }
 }
 
-// Gérer les compteurs + et -
+// Gestion des boutons + et - pour les paramètres
 function updateCounter(id, change) {
     const span = document.getElementById(id);
     let val = parseInt(span.textContent) + change;
-    
     if (id === 'undercover-count' && val >= 1 && val <= 5) span.textContent = val;
     if (id === 'mr-white-count' && val >= 0 && val <= 5) span.textContent = val;
 }
@@ -47,13 +47,13 @@ function addPlayer() {
 }
 
 function startGame() {
-    // On lit maintenant la valeur de nos nouveaux compteurs
     const undercoverCount = parseInt(document.getElementById("undercover-count").textContent);
     const mrWhiteCount = parseInt(document.getElementById("mr-white-count").textContent);
     const themeKey = document.getElementById("theme-select").value;
+    canUndercoverGuess = document.getElementById("allow-undercover-guess").checked;
 
     if (undercoverCount + mrWhiteCount >= players.length - 1) {
-        alert("Trop d'intrus ! Il faut au moins 2 civils de plus que d'intrus.");
+        alert("Trop d'intrus ! Il faut au plus de Civils.");
         return;
     }
 
@@ -118,27 +118,31 @@ function startVotingPhase() {
     });
 
     switchScreen("word-screen", "debate-screen");
-    switchScreen("continue-screen", "debate-screen"); // Si on vient de l'écran de continuation
+    switchScreen("continue-screen", "debate-screen");
 }
 
 function handleVote(votedPlayer) {
     votedPlayer.isAlive = false;
     currentVotedPlayer = votedPlayer;
 
-    if (votedPlayer.role === "Mr. White") {
-        document.getElementById("white-guess-title").textContent = `👻 ${votedPlayer.name} était Mr. White !`;
+    const isMrWhite = votedPlayer.role === "Mr. White";
+    const isUnderAndCanGuess = votedPlayer.role === "Undercover" && canUndercoverGuess;
+
+    if (isMrWhite || isUnderAndCanGuess) {
+        const icon = isMrWhite ? "👻" : "🕵️‍♂️";
+        document.getElementById("guess-title").textContent = `${icon} ${votedPlayer.name} était ${votedPlayer.role} !`;
         switchScreen("debate-screen", "guess-screen");
     } else {
         checkWinConditions();
     }
 }
 
-function checkWhiteGuess() {
-    const guess = document.getElementById("white-guess").value.trim().toLowerCase();
+function checkIntruderGuess() {
+    const guess = document.getElementById("intruder-guess").value.trim().toLowerCase();
     if (guess === civWordGlobal.toLowerCase()) {
-        showResult("👻 Victoire de Mr. White !", `Il a trouvé le mot "${civWordGlobal}".`);
+        showResult(`🎉 Victoire de ${currentVotedPlayer.name} !`, `L'intrus a trouvé le mot des civils : "${civWordGlobal}".`);
     } else {
-        document.getElementById("white-guess").value = "";
+        document.getElementById("intruder-guess").value = "";
         checkWinConditions();
     }
 }
@@ -151,13 +155,12 @@ function checkWinConditions() {
     if (aliveIntruders.length === 0) {
         showResult("🎉 Victoire des Civils !", "Tous les intrus ont été éliminés.");
     } else if (aliveCivils.length <= aliveIntruders.length) {
-        showResult("💀 Les Civils ont perdu...", "Les intrus sont maintenant trop nombreux ou à égalité.");
+        showResult("💀 Les Civils ont perdu...", "Les intrus sont trop nombreux !");
     } else {
-        // Le jeu continue avec un bel écran !
         roundCount++;
-        document.getElementById("continue-desc").textContent = `Vous avez éliminé ${currentVotedPlayer.name}. Mais attention, il reste encore des intrus parmi vous...`;
+        document.getElementById("continue-desc").textContent = `${currentVotedPlayer.name} a été éliminé. Mais il reste des intrus...`;
         switchScreen("debate-screen", "continue-screen");
-        switchScreen("guess-screen", "continue-screen"); // Au cas où Mr White s'est trompé
+        switchScreen("guess-screen", "continue-screen");
     }
 }
 
