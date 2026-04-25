@@ -1,0 +1,42 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0b0f19;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    text-align: center;
+}
+
+#app {
+    background-color: #16213e;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    width: 90%;
+    max-width: 450px;
+}
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+button { background-color: #e94560; color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 16px;}
+.back-btn { background-color: transparent; border: 1px solid white; width: auto; padding: 5px 10px; font-size: 14px; margin-bottom: 15px;}
+.quit-btn { background-color: transparent; color: #888; font-size: 14px; margin-top: 20px;}
+
+.settings-box-container { background: #0f3460; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: left; }
+.theme-list { max-height: 180px; overflow-y: auto; background: #16213e; padding: 10px; border-radius: 5px; display: grid; gap: 8px; }
+.theme-item { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+
+.guide-box { background: #0f3460; border: 2px dashed #e94560; border-radius: 10px; padding: 20px; margin: 20px 0; }
+.instruction-label { font-size: 0.9em; color: #ffbc00; margin-bottom: 20px; font-weight: bold; }
+.secret-content { display: none; transition: 0.3s; }
+.label { color: #888; font-size: 0.9em; text-transform: uppercase; margin-bottom: 5px; }
+#secret-word-display { color: #e94560; margin: 0 0 20px 0; font-size: 2.2em; }
+.hint-box { background: #16213e; padding: 15px; border-radius: 8px; text-align: left; }
+#geometry-hint { line-height: 1.5; margin: 0; font-style: italic; }
+
+.custom-checkbox { width: 20px; height: 20px; accent-color: #e94560; }
+
