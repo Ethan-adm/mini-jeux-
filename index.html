@@ -25,7 +25,12 @@
             max-width: 450px; 
         }
         h1 { margin-bottom: 10px; color: #fff; }
-        .games-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+        .games-grid { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            margin-top: 20px; 
+        }
         .game-card { 
             background-color: #0f3460; 
             border: 2px solid #e94560; 
@@ -48,7 +53,8 @@
             opacity: 0.7; 
             pointer-events: none;
         }
-        p { opacity: 0.8; margin: 0; }
+        p { opacity: 0.8; margin: 0; font-size: 0.9em; }
+        h2 { margin: 0 0 5px 0; font-size: 1.4em; }
     </style>
 </head>
 <body>
@@ -59,22 +65,27 @@
         <div class="games-grid">
             <a href="undercover/index.html" class="game-card">
                 <h2>🕵️‍♂️ Undercover</h2>
-                <p>Démasquez les intrus !</p>
+                <p>Démasquez les intrus parmi les civils !</p>
             </a>
 
             <a href="bombe/index.html" class="game-card">
                 <h2>💣 La Bombe</h2>
-                <p>Trouvez un mot avant l'explosion !</p>
+                <p>Donne un mot vite avant l'explosion !</p>
             </a>
 
             <a href="quipourrait/index.html" class="game-card">
                 <h2>👉 Qui pourrait... ?</h2>
-                <p>Le jeu qui brise des amitiés.</p>
+                <p>Le jeu du doigt qui brise des amitiés.</p>
+            </a>
+
+            <a href="dessinateur/index.html" class="game-card">
+                <h2>🎨 Dessinateur Aveugle</h2>
+                <p>Guidez le dessin avec la géométrie !</p>
             </a>
             
             <a href="#" class="game-card disabled">
                 <h2>⏳ Prochainement...</h2>
-                <p>Un nouveau jeu arrive</p>
+                <p>Un nouveau jeu arrive bientôt</p>
             </a>
         </div>
     </div>
