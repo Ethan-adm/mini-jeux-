@@ -1,11 +1,10 @@
-// On organise les mots par thèmes
 const themes = {
     "divers": [
         ["Pomme", "Poire"], ["Cinéma", "Théâtre"], ["Voiture", "Moto"],
         ["Plage", "Piscine"], ["Guitare", "Piano"], ["Chien", "Loup"]
     ],
     "anime": [
-        ["Naruto", "Sasuke"], ["Luffy", "Zoro"] // Tu pourras remplir ici plus tard
+        ["Naruto", "Sasuke"], ["Luffy", "Zoro"]
     ],
     "transports": [
         ["Avion", "Hélicoptère"], ["Vélo", "Trotinette"]
@@ -17,12 +16,21 @@ let playerRoles = [];
 let currentPlayerIndex = 0;
 let civWordGlobal = "";
 let roundCount = 1;
-let currentVotedPlayer = null; // Pour savoir quel Mr White est en train de deviner
+let currentVotedPlayer = null;
 
 function openGame(gameName) {
     if (gameName === 'undercover') {
         switchScreen("hub-screen", "setup-screen");
     }
+}
+
+// Gérer les compteurs + et -
+function updateCounter(id, change) {
+    const span = document.getElementById(id);
+    let val = parseInt(span.textContent) + change;
+    
+    if (id === 'undercover-count' && val >= 1 && val <= 5) span.textContent = val;
+    if (id === 'mr-white-count' && val >= 0 && val <= 5) span.textContent = val;
 }
 
 function addPlayer() {
@@ -39,23 +47,22 @@ function addPlayer() {
 }
 
 function startGame() {
-    const undercoverCount = parseInt(document.getElementById("undercover-count").value);
-    const mrWhiteCount = parseInt(document.getElementById("mr-white-count").value);
+    // On lit maintenant la valeur de nos nouveaux compteurs
+    const undercoverCount = parseInt(document.getElementById("undercover-count").textContent);
+    const mrWhiteCount = parseInt(document.getElementById("mr-white-count").textContent);
     const themeKey = document.getElementById("theme-select").value;
 
     if (undercoverCount + mrWhiteCount >= players.length - 1) {
-        alert("Trop d'intrus ! Il faut au moins 2 civils.");
+        alert("Trop d'intrus ! Il faut au moins 2 civils de plus que d'intrus.");
         return;
     }
 
-    // Choisir le mot selon le thème
     const themeWords = themes[themeKey] || themes["divers"];
     const randomPair = themeWords[Math.floor(Math.random() * themeWords.length)];
     const isSwapped = Math.random() > 0.5;
     civWordGlobal = isSwapped ? randomPair[0] : randomPair[1];
     const undercoverWord = isSwapped ? randomPair[1] : randomPair[0];
 
-    // Créer la liste des rôles
     let rolesPool = [];
     for (let i = 0; i < undercoverCount; i++) rolesPool.push("Undercover");
     for (let i = 0; i < mrWhiteCount; i++) rolesPool.push("Mr. White");
@@ -111,6 +118,7 @@ function startVotingPhase() {
     });
 
     switchScreen("word-screen", "debate-screen");
+    switchScreen("continue-screen", "debate-screen"); // Si on vient de l'écran de continuation
 }
 
 function handleVote(votedPlayer) {
@@ -130,7 +138,6 @@ function checkWhiteGuess() {
     if (guess === civWordGlobal.toLowerCase()) {
         showResult("👻 Victoire de Mr. White !", `Il a trouvé le mot "${civWordGlobal}".`);
     } else {
-        alert("Faux ! Mr. White est définitivement éliminé.");
         document.getElementById("white-guess").value = "";
         checkWinConditions();
     }
@@ -144,12 +151,13 @@ function checkWinConditions() {
     if (aliveIntruders.length === 0) {
         showResult("🎉 Victoire des Civils !", "Tous les intrus ont été éliminés.");
     } else if (aliveCivils.length <= aliveIntruders.length) {
-        showResult("🕵️ Victoire des Intrus !", "Ils sont devenus trop puissants.");
+        showResult("💀 Les Civils ont perdu...", "Les intrus sont maintenant trop nombreux ou à égalité.");
     } else {
-        // Le jeu continue !
+        // Le jeu continue avec un bel écran !
         roundCount++;
-        alert(`Il reste encore des intrus ! On passe au tour ${roundCount}.`);
-        startVotingPhase();
+        document.getElementById("continue-desc").textContent = `Vous avez éliminé ${currentVotedPlayer.name}. Mais attention, il reste encore des intrus parmi vous...`;
+        switchScreen("debate-screen", "continue-screen");
+        switchScreen("guess-screen", "continue-screen"); // Au cas où Mr White s'est trompé
     }
 }
 
