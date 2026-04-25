@@ -28,14 +28,18 @@
             <h1>🕵️‍♂️ Undercover</h1>
             
             <div class="settings-box-container">
-                <div class="settings-row">
-                    <label>Thème :</label>
-                    <select id="theme-select">
-                        <option value="divers">🌍 Divers (Mixte)</option>
-                        <option value="anime">🏮 Anime (Bientôt)</option>
-                        <option value="transports">🚗 Transports (Bientôt)</option>
-                    </select>
+                <div class="settings-row theme-section">
+                    <div class="theme-header">
+                        <label>📚 Thèmes :</label>
+                        <label class="select-all-label">
+                            <input type="checkbox" id="select-all-themes" class="custom-checkbox" onchange="toggleAllThemes(this)" checked>
+                            Tout / Hasard
+                        </label>
+                    </div>
+                    <div class="theme-list" id="theme-list">
+                        </div>
                 </div>
+
                 <div class="settings-row">
                     <label>🕵️ Undercovers :</label>
                     <div class="counter-group">
