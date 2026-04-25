@@ -1,4 +1,3 @@
-// La base de données complète des 17 thèmes !
 const themes = {
     "metiers": { name: "💼 Métiers & Célébrités", words: [["Médecin", "Infirmier"], ["Pompier", "Policier"], ["Professeur", "Élève"], ["Boucher", "Boulanger"], ["Astronaute", "Pilote"], ["Cristiano Ronaldo", "Lionel Messi"], ["Elon Musk", "Jeff Bezos"], ["YouTubeur", "Influenceur"], ["Acteur", "Chanteur"], ["Avocat", "Juge"]] },
     "animaux": { name: "🦁 Animaux & Nature", words: [["Lion", "Tigre"], ["Abeille", "Guêpe"], ["Dauphin", "Requin"], ["Pingouin", "Manchot"], ["Loup", "Renard"], ["Escargot", "Limace"], ["Chameau", "Dromadaire"], ["Forêt", "Jungle"], ["Océan", "Mer"], ["Crapaud", "Grenouille"], ["Rat", "Souris"], ["Cheval", "Poney"], ["Zèbre", "Âne"], ["Corbeau", "Pie"], ["Requin", "Orque"], ["Poule", "Canard"], ["Lézard", "Salamandre"], ["Moustique", "Mouche"], ["Girafe", "Autruche"]] },
@@ -98,7 +97,6 @@ function startGame() {
     for (let i = 0; i < mrWhiteCount; i++) rolesPool.push("Mr. White");
     while (rolesPool.length < players.length) rolesPool.push("Civil");
 
-    // L'algorithme parfait de Fisher-Yates pour éviter la triche involontaire !
     for (let i = rolesPool.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [rolesPool[i], rolesPool[j]] = [rolesPool[j], rolesPool[i]];
@@ -209,4 +207,3 @@ function switchScreen(hideId, showId) {
     document.getElementById(hideId).classList.remove("active");
     document.getElementById(showId).classList.add("active");
 }
-
