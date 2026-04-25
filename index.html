@@ -7,12 +7,12 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0b0f19; color: #ffffff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
         #hub { background-color: #16213e; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 90%; max-width: 450px; }
+        h1 { margin-bottom: 10px; }
         .games-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
-        
-        /* Le lien vers ton dossier undercover */
         .game-card { background-color: #0f3460; border: 2px solid #e94560; border-radius: 10px; padding: 15px; cursor: pointer; transition: 0.3s; color: white; text-decoration: none; display: block;}
-        .game-card:hover { background-color: #e94560; }
+        .game-card:hover { background-color: #e94560; transform: translateY(-2px); }
         .disabled { border-color: #333; background-color: #222; cursor: not-allowed; opacity: 0.7; pointer-events: none;}
+        p { opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -20,7 +20,7 @@
         <h1>🎮 Mes Mini-Jeux</h1>
         <p>Choisis un jeu pour commencer :</p>
         <div class="games-grid">
-            <a href="/mini-jeux-/undercover/index.html" class="game-card">
+            <a href="https://ethan-adm.github.io/mini-jeux-/undercover/index.html" class="game-card">
                 <h2>🕵️‍♂️ Undercover</h2>
                 <p>Démasquez les intrus !</p>
             </a>
