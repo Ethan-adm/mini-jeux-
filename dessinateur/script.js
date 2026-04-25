@@ -73,10 +73,21 @@ window.onload = function() {
     for (const [key, data] of Object.entries(themes)) {
         const div = document.createElement("div");
         div.className = "theme-item";
-        div.innerHTML = `<input type="checkbox" class="theme-checkbox custom-checkbox" value="${key}" checked> <label>${data.name}</label>`;
+        div.innerHTML = `<input type="checkbox" class="theme-checkbox custom-checkbox" value="${key}" checked onchange="checkSelectAll()"> <label>${data.name}</label>`;
         list.appendChild(div);
     }
 };
+
+// --- FONCTIONS MANQUANTES POUR LE BOUTON TOUT SÉLECTIONNER ---
+function toggleAllThemes(source) {
+    const checkboxes = document.querySelectorAll('.theme-checkbox');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+}
+
+function checkSelectAll() {
+    const allChecked = document.querySelectorAll('.theme-checkbox:not(:checked)').length === 0;
+    document.getElementById('select-all-themes').checked = allChecked;
+}
 
 function startGame() {
     const checked = document.querySelectorAll('.theme-checkbox:checked');
@@ -90,7 +101,7 @@ function startGame() {
     // On enregistre si l'utilisateur veut voir les astuces
     showHintsSetting = document.getElementById("toggle-hints").checked;
     
-    // Mélange (Fisher-Yates pour être sûr !)
+    // Mélange (Fisher-Yates)
     for (let i = currentPool.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [currentPool[i], currentPool[j]] = [currentPool[j], currentPool[i]];
@@ -108,10 +119,15 @@ function nextRound() {
     document.getElementById("secret-word-display").textContent = item.word;
     document.getElementById("geometry-hint").textContent = item.hint;
     
-    // On cache ou on affiche le bloc d'astuces selon le réglage
-    document.getElementById("hint-area").style.display = showHintsSetting ? "block" : "none";
+    // On force l'affichage ou le masquage strictement ici
+    const hintArea = document.getElementById("hint-area");
+    if (showHintsSetting) {
+        hintArea.style.setProperty('display', 'block', 'important');
+    } else {
+        hintArea.style.setProperty('display', 'none', 'important');
+    }
     
-    // Reset l'affichage pour le nouveau tour
+    // Cache le mot pour le prochain tour
     document.getElementById("secret-container").style.display = "none";
     document.getElementById("show-btn").style.display = "block";
     document.getElementById("next-btn").style.display = "none";
