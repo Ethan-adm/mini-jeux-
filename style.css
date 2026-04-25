@@ -95,3 +95,13 @@ select {
 .vote-btn { background-color: #0f3460; margin-bottom: 10px; border: 1px solid #e94560; }
 .vote-btn:hover { background-color: #e94560; }
 .vote-btn.eliminated { opacity: 0.4; text-decoration: line-through; pointer-events: none; border-color: #555; }
+
+/* Style pour la case à cocher */
+.custom-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #e94560; /* Rend la case rouge quand elle est cochée */
+    margin: 0;
+}
+
