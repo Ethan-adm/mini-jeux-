@@ -3,15 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plateforme de Mini-Jeux | Undercover</title>
+    <title>Ma Plateforme de Mini-Jeux</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app">
-        <h1>🕵️‍♂️ Undercover</h1>
+        <div id="hub-screen" class="screen active">
+            <h1>🎮 Mes Mini-Jeux</h1>
+            <p>Choisis un jeu pour commencer :</p>
+            <div class="games-grid">
+                <button class="game-card" onclick="openGame('undercover')">
+                    <h2>🕵️‍♂️ Undercover</h2>
+                    <p>Démasquez les intrus !</p>
+                </button>
+                <button class="game-card disabled" disabled>
+                    <h2>⏳ Prochainement...</h2>
+                    <p>Un nouveau jeu arrive</p>
+                </button>
+            </div>
+        </div>
 
-        <div id="setup-screen" class="screen active">
-            <p>Ajoutez au moins 3 joueurs :</p>
+        <div id="setup-screen" class="screen">
+            <button class="back-btn" onclick="switchScreen('setup-screen', 'hub-screen')">⬅ Retour</button>
+            <h1>🕵️‍♂️ Undercover</h1>
+            
+            <div class="settings-box">
+                <label for="mr-white-count">👻 Nombre de Mr. White : </label>
+                <input type="number" id="mr-white-count" value="0" min="0" max="3">
+            </div>
+
+            <p>Ajoutez les joueurs (3 minimum) :</p>
             <div class="input-group">
                 <input type="text" id="player-name" placeholder="Nom du joueur">
                 <button onclick="addPlayer()">Ajouter</button>
@@ -22,20 +43,33 @@
 
         <div id="turn-screen" class="screen">
             <h2 id="turn-title">Au tour de...</h2>
-            <p>Assurez-vous que personne d'autre ne regarde l'écran ! 👀</p>
-            <button onclick="showWord()">Voir mon mot</button>
+            <p>Assure-toi d'être seul(e) à regarder l'écran 👀</p>
+            <button onclick="showWord()">Voir mon rôle</button>
         </div>
 
         <div id="word-screen" class="screen">
-            <h2>Ton mot est :</h2>
+            <h2 id="role-title">Ton mot est :</h2>
             <h1 id="secret-word" class="word-display">???</h1>
-            <button onclick="nextTurn()">J'ai bien mémorisé, cacher le mot</button>
+            <button onclick="nextTurn()">J'ai bien mémorisé</button>
         </div>
 
         <div id="debate-screen" class="screen">
             <h2>🗣️ Place au débat !</h2>
-            <p>Tout le monde a vu son mot. Essayez de démasquer l'Undercover !</p>
-            <button onclick="location.reload()">Rejouer</button>
+            <p>Discutez et votez pour éliminer quelqu'un :</p>
+            <div id="vote-list"></div>
+        </div>
+
+        <div id="guess-screen" class="screen">
+            <h2>👻 Mr. White est démasqué !</h2>
+            <p>Tu as une chance de voler la victoire. Quel était le mot des civils ?</p>
+            <input type="text" id="white-guess" placeholder="Tape le mot ici...">
+            <button onclick="checkWhiteGuess()">Tenter ma chance</button>
+        </div>
+
+        <div id="result-screen" class="screen">
+            <h1 id="result-title">Résultat</h1>
+            <p id="result-desc"></p>
+            <button onclick="location.reload()">Retour au menu principal</button>
         </div>
     </div>
     <script src="script.js"></script>
