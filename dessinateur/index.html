@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Dessinateur Aveugle</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="setup-screen" class="screen active">
+            <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
+            <h1>🎨 Dessinateur Aveugle</h1>
+            
+            <div class="settings-box-container">
+                <div class="settings-row theme-section">
+                    <div class="theme-header">
+                        <label>📚 Thèmes :</label>
+                    </div>
+                    <div class="theme-list" id="theme-list">
+                        </div>
+                </div>
+            </div>
+
+            <p>Le guide donne les instructions, l'autre dessine sans savoir ce que c'est !</p>
+            <button onclick="startGame()" id="start-btn">Démarrer</button>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <div class="guide-box">
+                <p class="instruction-label">🤫 Chut... Ne montre pas cet écran !</p>
+                
+                <div id="secret-container" class="secret-content">
+                    <h3 class="label">Mot Secret :</h3>
+                    <h1 id="secret-word-display">Maison</h1>
+                    
+                    <div class="hint-box">
+                        <h3 class="label">Astuces Géométriques :</h3>
+                        <p id="geometry-hint">Un carré, un triangle au-dessus...</p>
+                    </div>
+                </div>
+
+                <button id="show-btn" onclick="revealSecret()">👀 Voir le mot secret</button>
+            </div>
+
+            <div class="controls-zone">
+                <button onclick="nextRound()" id="next-btn" style="display:none;">Mot Suivant ⏭️</button>
+                <button class="quit-btn" onclick="location.reload()">Quitter la partie</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+
