@@ -3,28 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ma Plateforme de Mini-Jeux</title>
+    <title>Undercover</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app">
-        <div id="hub-screen" class="screen active">
-            <h1>🎮 Mes Mini-Jeux</h1>
-            <p>Choisis un jeu pour commencer :</p>
-            <div class="games-grid">
-                <button class="game-card" onclick="openGame('undercover')">
-                    <h2>🕵️‍♂️ Undercover</h2>
-                    <p>Démasquez les intrus !</p>
-                </button>
-                <button class="game-card disabled" disabled>
-                    <h2>⏳ Prochainement...</h2>
-                    <p>Un nouveau jeu arrive</p>
-                </button>
-            </div>
-        </div>
-
-        <div id="setup-screen" class="screen">
-            <button class="back-btn" onclick="location.reload()">⬅ Retour</button>
+        <div id="setup-screen" class="screen active">
+            <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
             <h1>🕵️‍♂️ Undercover</h1>
             
             <div class="settings-box-container">
@@ -36,8 +21,7 @@
                             Tout / Hasard
                         </label>
                     </div>
-                    <div class="theme-list" id="theme-list">
-                        </div>
+                    <div class="theme-list" id="theme-list"></div>
                 </div>
 
                 <div class="settings-row">
@@ -97,7 +81,7 @@
 
         <div id="guess-screen" class="screen">
             <h2 id="guess-title">👻 Un intrus est démasqué !</h2>
-            <p>Dernière chance de voler la victoire. Quel était le mot des civils ?</p>
+            <p>Dernière chance. Quel était le mot des civils ?</p>
             <input type="text" id="intruder-guess" placeholder="Le mot est...">
             <button onclick="checkIntruderGuess()">Tenter ma chance</button>
         </div>
@@ -105,7 +89,7 @@
         <div id="result-screen" class="screen">
             <h1 id="result-title">Résultat</h1>
             <p id="result-desc"></p>
-            <button onclick="location.reload()">Retour au menu</button>
+            <button onclick="location.reload()">Rejouer</button>
         </div>
     </div>
     <script src="script.js"></script>
