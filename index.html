@@ -16,6 +16,10 @@
                     <h2>🕵️‍♂️ Undercover</h2>
                     <p>Démasquez les intrus !</p>
                 </button>
+                <button class="game-card disabled" disabled>
+                    <h2>⏳ Prochainement...</h2>
+                    <p>Un nouveau jeu arrive</p>
+                </button>
             </div>
         </div>
 
@@ -34,11 +38,19 @@
                 </div>
                 <div class="settings-row">
                     <label>🕵️ Undercovers :</label>
-                    <input type="number" id="undercover-count" value="1" min="1" max="3">
+                    <div class="counter-group">
+                        <button class="counter-btn" onclick="updateCounter('undercover-count', -1)">-</button>
+                        <span id="undercover-count" class="counter-val">1</span>
+                        <button class="counter-btn" onclick="updateCounter('undercover-count', 1)">+</button>
+                    </div>
                 </div>
                 <div class="settings-row">
                     <label>👻 Mr. Whites :</label>
-                    <input type="number" id="mr-white-count" value="0" min="0" max="3">
+                    <div class="counter-group">
+                        <button class="counter-btn" onclick="updateCounter('mr-white-count', -1)">-</button>
+                        <span id="mr-white-count" class="counter-val">0</span>
+                        <button class="counter-btn" onclick="updateCounter('mr-white-count', 1)">+</button>
+                    </div>
                 </div>
             </div>
 
@@ -67,6 +79,12 @@
             <h2>🗣️ Débat - Tour <span id="round-number">1</span></h2>
             <p>Discutez et éliminez un suspect :</p>
             <div id="vote-list"></div>
+        </div>
+
+        <div id="continue-screen" class="screen">
+            <h2>Le jeu continue !</h2>
+            <p id="continue-desc"></p>
+            <button onclick="startVotingPhase()">Passer au tour suivant</button>
         </div>
 
         <div id="guess-screen" class="screen">
