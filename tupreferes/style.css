@@ -1,0 +1,76 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0b0f19;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    text-align: center;
+}
+
+#app {
+    background-color: #16213e;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    width: 95%;
+    max-width: 500px;
+}
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+.settings-box-container { background: #0f3460; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: left; }
+.theme-list { max-height: 180px; overflow-y: auto; background: #16213e; padding: 10px; border-radius: 5px; display: grid; gap: 8px; margin-bottom: 15px; }
+.theme-item { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+
+.dilemma-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin: 20px 0;
+    position: relative;
+}
+
+.option-box {
+    padding: 25px 15px;
+    border-radius: 12px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+}
+
+.option-a { background-color: #e94560; color: white; }
+.option-b { background-color: #0f3460; color: white; border: 2px solid #e94560; }
+
+.vs-circle {
+    width: 40px;
+    height: 40px;
+    background: #ffffff;
+    color: #1a1a2e;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin: -5px auto;
+    z-index: 2;
+    border: 3px solid #16213e;
+}
+
+.option-box:active { transform: scale(0.95); }
+
+button { background-color: #e94560; color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; font-size: 16px;}
+.back-btn { background-color: transparent; border: 1px solid white; width: auto; padding: 5px 10px; font-size: 14px; margin-bottom: 15px;}
+.quit-btn { background-color: transparent; color: #888; margin-top: 20px; font-size: 14px; width: auto;}
+
+.custom-checkbox { width: 20px; height: 20px; accent-color: #e94560; }
+.vote-instruction { color: #ffbc00; font-weight: bold; margin-top: 20px; }
