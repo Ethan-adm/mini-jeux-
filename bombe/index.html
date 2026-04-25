@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Bombe</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="setup-screen" class="screen active">
+            <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
+            <h1>💣 La Bombe</h1>
+            
+            <div class="settings-box-container">
+                <div class="settings-row theme-section">
+                    <div class="theme-header">
+                        <label>📚 Thèmes :</label>
+                        <label class="select-all-label">
+                            <input type="checkbox" id="select-all-themes" class="custom-checkbox" onchange="toggleAllThemes(this)" checked>
+                            Tout / Hasard
+                        </label>
+                    </div>
+                    <div class="theme-list" id="theme-list"></div>
+                </div>
+
+                <div class="settings-row checkbox-row">
+                    <label for="duel-mode">⚔️ Mode Duel (Ultra rapide 10-20s) :</label>
+                    <input type="checkbox" id="duel-mode" class="custom-checkbox">
+                </div>
+            </div>
+
+            <p>Montez le son ! 🔊</p>
+            <button onclick="startGame()" id="start-btn">Démarrer la Bombe</button>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <h2 id="theme-display" class="theme-title">Thème</h2>
+            <div class="bomb-container">
+                <span id="bomb-emoji">💣</span>
+            </div>
+            
+            <div class="input-zone">
+                <input type="text" id="word-input" placeholder="Tape vite ton mot..." autocomplete="off">
+                <button onclick="passBomb()" id="pass-btn">Passer la bombe !</button>
+            </div>
+        </div>
+
+        <div id="explosion-screen" class="screen">
+            <h1 class="boom-text">💥 BOOM ! 💥</h1>
+            <h2>Le téléphone a explosé !</h2>
+            
+            <div class="history-container">
+                <h3>📜 Mots dits :</h3>
+                <ul id="word-history"></ul>
+            </div>
+            
+            <button onclick="location.reload()">Rejouer</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
