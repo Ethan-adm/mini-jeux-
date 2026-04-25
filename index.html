@@ -14,79 +14,100 @@
             align-items: center; 
             min-height: 100vh; 
             margin: 0; 
+            padding: 20px 0;
             text-align: center; 
         }
         #hub { 
             background-color: #16213e; 
             padding: 30px; 
-            border-radius: 15px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            border-radius: 20px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
             width: 90%; 
-            max-width: 450px; 
+            max-width: 480px; 
         }
-        h1 { margin-bottom: 10px; color: #fff; }
+        h1 { margin-bottom: 10px; color: #fff; font-size: 2em; }
+        .subtitle { opacity: 0.7; margin-bottom: 30px; font-size: 0.95em; }
+        
         .games-grid { 
             display: flex; 
             flex-direction: column; 
             gap: 15px; 
-            margin-top: 20px; 
         }
+        
         .game-card { 
             background-color: #0f3460; 
             border: 2px solid #e94560; 
-            border-radius: 10px; 
-            padding: 15px; 
+            border-radius: 12px; 
+            padding: 18px; 
             cursor: pointer; 
-            transition: 0.3s; 
+            transition: all 0.3s ease; 
             color: white; 
             text-decoration: none; 
-            display: block;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
+        
         .game-card:hover { 
             background-color: #e94560; 
-            transform: translateY(-2px); 
+            transform: translateY(-3px); 
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
         }
+        
+        .game-card h2 { margin: 0 0 5px 0; font-size: 1.3em; }
+        .game-card p { margin: 0; font-size: 0.85em; opacity: 0.9; line-height: 1.4; }
+
         .disabled { 
             border-color: #333; 
-            background-color: #222; 
+            background-color: #1a1a2e; 
             cursor: not-allowed; 
-            opacity: 0.7; 
+            opacity: 0.6; 
             pointer-events: none;
         }
-        p { opacity: 0.8; margin: 0; font-size: 0.9em; }
-        h2 { margin: 0 0 5px 0; font-size: 1.4em; }
+        
+        .footer { margin-top: 30px; font-size: 0.8em; opacity: 0.5; }
     </style>
 </head>
 <body>
     <div id="hub">
         <h1>🎮 Mes Mini-Jeux</h1>
-        <p>Choisis un jeu pour commencer :</p>
+        <p class="subtitle">Choisis ton jeu pour la soirée :</p>
         
         <div class="games-grid">
             <a href="undercover/index.html" class="game-card">
                 <h2>🕵️‍♂️ Undercover</h2>
-                <p>Démasquez les intrus parmi les civils !</p>
+                <p>Démasquez les intrus cachés parmi les civils !</p>
             </a>
 
             <a href="bombe/index.html" class="game-card">
                 <h2>💣 La Bombe</h2>
-                <p>Donne un mot vite avant l'explosion !</p>
+                <p>Trouvez un mot avant que tout n'explose !</p>
             </a>
 
             <a href="quipourrait/index.html" class="game-card">
                 <h2>👉 Qui pourrait... ?</h2>
-                <p>Le jeu du doigt qui brise des amitiés.</p>
+                <p>Pointez du doigt celui qui correspond à la question.</p>
             </a>
 
             <a href="dessinateur/index.html" class="game-card">
                 <h2>🎨 Dessinateur Aveugle</h2>
-                <p>Guidez le dessin avec la géométrie !</p>
+                <p>Guidez votre partenaire avec des formes géométriques.</p>
+            </a>
+
+            <a href="tupreferes/index.html" class="game-card">
+                <h2>⚖️ Tu préfères ?</h2>
+                <p>Tranchez entre deux dilemmes impossibles.</p>
             </a>
             
             <a href="#" class="game-card disabled">
-                <h2>⏳ Prochainement...</h2>
-                <p>Un nouveau jeu arrive bientôt</p>
+                <h2>⏳ Bientôt...</h2>
+                <p>Un nouveau défi arrive dans ta poche.</p>
             </a>
+        </div>
+
+        <div class="footer">
+            Créé avec passion pour tes meilleures soirées 🚀
         </div>
     </div>
 </body>
