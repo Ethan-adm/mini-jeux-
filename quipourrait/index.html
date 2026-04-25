@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qui Pourrait... ?</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="setup-screen" class="screen active">
+            <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
+            <h1>👉 Qui pourrait... ?</h1>
+            
+            <div class="settings-box-container">
+                <div class="settings-row theme-section">
+                    <div class="theme-header">
+                        <label>📚 Thèmes (Tu peux en cocher plusieurs) :</label>
+                    </div>
+                    <div class="theme-list" id="theme-list">
+                        </div>
+                </div>
+            </div>
+
+            <p>Au signal, tout le monde pointe du doigt la personne visée !</p>
+            <button onclick="startGame()" id="start-btn">C'est parti !</button>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <div class="question-container">
+                <h3>Qui pourrait...</h3>
+                <h1 id="question-display" class="question-text">...</h1>
+            </div>
+            
+            <div class="timer-container" id="timer-display" style="display: none;">
+                3
+            </div>
+
+            <div class="controls-zone">
+                <button onclick="startCountdown()" id="countdown-btn">Lancer le compte à rebours ⏱️</button>
+                <button onclick="nextQuestion()" id="next-btn" class="secondary-btn" style="display: none;">Question Suivante ⏭️</button>
+            </div>
+            
+            <button class="quit-btn" onclick="location.reload()">Quitter</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+
