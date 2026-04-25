@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu préfères ?</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="setup-screen" class="screen active">
+            <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
+            <h1>⚖️ Tu préfères ?</h1>
+            
+            <div class="settings-box-container">
+                <div class="settings-row theme-section">
+                    <div class="theme-header">
+                        <label>📚 Thèmes :</label>
+                    </div>
+                    <div class="theme-list" id="theme-list"></div>
+                </div>
+
+                <div class="settings-row checkbox-row">
+                    <label for="challenge-mode">🎯 Mode Défi (Deviner la majorité) :</label>
+                    <input type="checkbox" id="challenge-mode" class="custom-checkbox">
+                </div>
+            </div>
+
+            <p>Discutez, débattez et faites votre choix !</p>
+            <button onclick="startGame()" id="start-btn">Lancer le dilemme</button>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <h3 class="game-instruction">Tu préfères...</h3>
+            
+            <div class="dilemma-container">
+                <div class="option-box option-a" onclick="selectOption('A')">
+                    <p id="display-a">Option A</p>
+                </div>
+                
+                <div class="vs-circle">OU</div>
+                
+                <div class="option-box option-b" onclick="selectOption('B')">
+                    <p id="display-b">Option B</p>
+                </div>
+            </div>
+
+            <div id="result-zone" style="display:none;">
+                <p class="vote-instruction">Votez tous en même temps !</p>
+                <button onclick="nextDilemma()">Dilemme Suivant ⏭️</button>
+            </div>
+
+            <button class="quit-btn" onclick="location.reload()">Quitter</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
