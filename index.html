@@ -52,6 +52,10 @@
                         <button class="counter-btn" onclick="updateCounter('mr-white-count', 1)">+</button>
                     </div>
                 </div>
+                <div class="settings-row checkbox-row">
+                    <label for="allow-undercover-guess">L'Undercover peut deviner :</label>
+                    <input type="checkbox" id="allow-undercover-guess" class="custom-checkbox">
+                </div>
             </div>
 
             <p>Joueurs (3 minimum) :</p>
@@ -88,10 +92,10 @@
         </div>
 
         <div id="guess-screen" class="screen">
-            <h2 id="white-guess-title">👻 Mr. White est démasqué !</h2>
-            <p>Devine le mot des civils pour gagner :</p>
-            <input type="text" id="white-guess" placeholder="Le mot est...">
-            <button onclick="checkWhiteGuess()">Valider</button>
+            <h2 id="guess-title">👻 Un intrus est démasqué !</h2>
+            <p>Dernière chance de voler la victoire. Quel était le mot des civils ?</p>
+            <input type="text" id="intruder-guess" placeholder="Le mot est...">
+            <button onclick="checkIntruderGuess()">Tenter ma chance</button>
         </div>
 
         <div id="result-screen" class="screen">
