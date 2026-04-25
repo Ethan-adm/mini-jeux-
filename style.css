@@ -29,15 +29,10 @@ body {
 
 .input-group { display: flex; justify-content: space-between; margin-bottom: 15px;}
 input { padding: 10px; border-radius: 5px; border: none; width: 65%; font-size: 16px; background-color: #2a3a5a; color: white;}
-input::placeholder { color: #aaa; }
 
-button { background-color: #e94560; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 16px;}
+button { background-color: #e94560; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;}
 .input-group button { width: 30%; margin-top: 0; }
 button:disabled { background-color: #555; cursor: not-allowed; }
-.back-btn { background-color: transparent; border: 1px solid white; width: auto; padding: 5px 10px; font-size: 14px; margin-bottom: 15px;}
-
-ul { list-style-type: none; padding: 0; }
-li { background: #0f3460; margin: 5px 0; padding: 10px; border-radius: 5px; }
 
 .settings-box-container {
     background: #0f3460;
@@ -49,59 +44,21 @@ li { background: #0f3460; margin: 5px 0; padding: 10px; border-radius: 5px; }
     gap: 15px;
 }
 
-.settings-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    text-align: left;
-}
+.settings-row { display: flex; justify-content: space-between; align-items: center; }
+.checkbox-row { font-size: 14px; margin-top: 5px; }
 
-select {
-    background: #16213e;
-    color: white;
-    border: 1px solid #e94560;
-    padding: 8px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-/* Nouveaux compteurs stylés */
 .counter-group {
     display: flex;
     align-items: center;
     background: #16213e;
     border-radius: 5px;
-    overflow: hidden;
     border: 1px solid #e94560;
 }
-.counter-btn {
-    width: 35px;
-    margin: 0;
-    border-radius: 0;
-    background-color: transparent;
-    font-size: 18px;
-    color: #e94560;
-}
-.counter-btn:hover { background-color: rgba(233, 69, 96, 0.2); }
-.counter-val {
-    width: 30px;
-    text-align: center;
-    font-weight: bold;
-}
+.counter-btn { width: 35px; background: transparent; color: #e94560; margin: 0; font-size: 18px; }
+.counter-val { width: 30px; font-weight: bold; }
 
-.word-display { color: #e94560; font-size: 2.5em; margin: 20px 0; }
+.custom-checkbox { width: 20px; height: 20px; accent-color: #e94560; }
+.word-display { color: #e94560; font-size: 2.5em; }
 
-.vote-btn { background-color: #0f3460; margin-bottom: 10px; border: 1px solid #e94560; }
-.vote-btn:hover { background-color: #e94560; }
-.vote-btn.eliminated { opacity: 0.4; text-decoration: line-through; pointer-events: none; border-color: #555; }
-
-/* Style pour la case à cocher */
-.custom-checkbox {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    accent-color: #e94560; /* Rend la case rouge quand elle est cochée */
-    margin: 0;
-}
-
+.vote-btn { background-color: #0f3460; border: 1px solid #e94560; margin-bottom: 10px; }
+.vote-btn.eliminated { opacity: 0.4; text-decoration: line-through; pointer-events: none; }
