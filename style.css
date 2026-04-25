@@ -28,7 +28,7 @@ body {
 .game-card.disabled { border-color: #333; background-color: #222; cursor: not-allowed; opacity: 0.7;}
 
 .input-group { display: flex; justify-content: space-between; margin-bottom: 15px;}
-input { padding: 10px; border-radius: 5px; border: none; width: 65%; font-size: 16px; background-color: #2a3a5a; color: white;}
+input[type="text"] { padding: 10px; border-radius: 5px; border: none; width: 65%; font-size: 16px; background-color: #2a3a5a; color: white;}
 
 button { background-color: #e94560; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;}
 .input-group button { width: 30%; margin-top: 0; }
@@ -47,6 +47,23 @@ button:disabled { background-color: #555; cursor: not-allowed; }
 .settings-row { display: flex; justify-content: space-between; align-items: center; }
 .checkbox-row { font-size: 14px; margin-top: 5px; }
 
+/* Styles pour la zone des thèmes */
+.theme-section { flex-direction: column; align-items: stretch; gap: 5px; }
+.theme-header { display: flex; justify-content: space-between; width: 100%; font-size: 14px; font-weight: bold; }
+.theme-list { 
+    max-height: 120px; 
+    overflow-y: auto; 
+    background: #16213e; 
+    padding: 10px; 
+    border-radius: 5px; 
+    border: 1px solid #e94560; 
+    display: grid; 
+    grid-template-columns: 1fr; 
+    gap: 8px; 
+}
+.theme-item { display: flex; align-items: center; gap: 8px; font-size: 14px; text-align: left; }
+.select-all-label { display: flex; align-items: center; gap: 5px; font-weight: normal;}
+
 .counter-group {
     display: flex;
     align-items: center;
@@ -57,7 +74,7 @@ button:disabled { background-color: #555; cursor: not-allowed; }
 .counter-btn { width: 35px; background: transparent; color: #e94560; margin: 0; font-size: 18px; }
 .counter-val { width: 30px; font-weight: bold; }
 
-.custom-checkbox { width: 20px; height: 20px; accent-color: #e94560; }
+.custom-checkbox { width: 18px; height: 18px; accent-color: #e94560; cursor: pointer; margin: 0;}
 .word-display { color: #e94560; font-size: 2.5em; }
 
 .vote-btn { background-color: #0f3460; border: 1px solid #e94560; margin-bottom: 10px; }
