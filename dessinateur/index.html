@@ -17,8 +17,12 @@
                     <div class="theme-header">
                         <label>📚 Thèmes :</label>
                     </div>
-                    <div class="theme-list" id="theme-list">
-                        </div>
+                    <div class="theme-list" id="theme-list"></div>
+                </div>
+
+                <div class="settings-row checkbox-row">
+                    <label for="toggle-hints">Afficher les astuces géométriques :</label>
+                    <input type="checkbox" id="toggle-hints" class="custom-checkbox" checked>
                 </div>
             </div>
 
@@ -32,11 +36,11 @@
                 
                 <div id="secret-container" class="secret-content">
                     <h3 class="label">Mot Secret :</h3>
-                    <h1 id="secret-word-display">Maison</h1>
+                    <h1 id="secret-word-display">...</h1>
                     
-                    <div class="hint-box">
+                    <div id="hint-area" class="hint-box">
                         <h3 class="label">Astuces Géométriques :</h3>
-                        <p id="geometry-hint">Un carré, un triangle au-dessus...</p>
+                        <p id="geometry-hint">...</p>
                     </div>
                 </div>
 
@@ -52,4 +56,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
