@@ -16,6 +16,10 @@
                 <div class="settings-row theme-section">
                     <div class="theme-header">
                         <label>📚 Thèmes :</label>
+                        <label class="select-all-label">
+                            <input type="checkbox" id="select-all-themes" class="custom-checkbox" onchange="toggleAllThemes(this)" checked>
+                            Tout
+                        </label>
                     </div>
                     <div class="theme-list" id="theme-list"></div>
                 </div>
@@ -35,11 +39,11 @@
                 <p class="instruction-label">🤫 Chut... Ne montre pas cet écran !</p>
                 
                 <div id="secret-container" class="secret-content">
-                    <h3 class="label">Mot Secret :</h3>
+                    <h3 class="label">MOT SECRET :</h3>
                     <h1 id="secret-word-display">...</h1>
                     
                     <div id="hint-area" class="hint-box">
-                        <h3 class="label">Astuces Géométriques :</h3>
+                        <h3 class="label">ASTUCES GÉOMÉTRIQUES :</h3>
                         <p id="geometry-hint">...</p>
                     </div>
                 </div>
