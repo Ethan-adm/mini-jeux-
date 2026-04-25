@@ -27,7 +27,6 @@ let roundCount = 1;
 let currentVotedPlayer = null;
 let canUndercoverGuess = false;
 
-// Initialiser les thèmes au chargement
 window.onload = function() {
     const themeList = document.getElementById("theme-list");
     for (const [key, data] of Object.entries(themes)) {
@@ -46,12 +45,6 @@ function toggleAllThemes(source) {
 function checkSelectAll() {
     const allChecked = document.querySelectorAll('.theme-checkbox:not(:checked)').length === 0;
     document.getElementById('select-all-themes').checked = allChecked;
-}
-
-function openGame(gameName) {
-    if (gameName === 'undercover') {
-        switchScreen("hub-screen", "setup-screen");
-    }
 }
 
 function updateCounter(id, change) {
@@ -84,7 +77,6 @@ function startGame() {
         return;
     }
 
-    // Récupérer les mots de tous les thèmes sélectionnés
     const checkedBoxes = document.querySelectorAll('.theme-checkbox:checked');
     let availableWords = [];
     checkedBoxes.forEach(box => {
@@ -106,7 +98,11 @@ function startGame() {
     for (let i = 0; i < mrWhiteCount; i++) rolesPool.push("Mr. White");
     while (rolesPool.length < players.length) rolesPool.push("Civil");
 
-    rolesPool = rolesPool.sort(() => Math.random() - 0.5);
+    // L'algorithme parfait de Fisher-Yates pour éviter la triche involontaire !
+    for (let i = rolesPool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rolesPool[i], rolesPool[j]] = [rolesPool[j], rolesPool[i]];
+    }
 
     playerRoles = players.map((name, index) => ({
         name: name,
@@ -213,3 +209,4 @@ function switchScreen(hideId, showId) {
     document.getElementById(hideId).classList.remove("active");
     document.getElementById(showId).classList.add("active");
 }
+
