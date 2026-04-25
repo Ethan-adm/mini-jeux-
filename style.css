@@ -1,4 +1,43 @@
-/* ... garde le début de ton ancien fichier style.css ... */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0b0f19;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    text-align: center;
+}
+
+#app {
+    background-color: #16213e;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    width: 90%;
+    max-width: 450px;
+}
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+.games-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+.game-card { background-color: #0f3460; border: 2px solid #e94560; border-radius: 10px; padding: 15px; cursor: pointer; transition: 0.3s; color: white;}
+.game-card:hover { background-color: #e94560; }
+.game-card.disabled { border-color: #333; background-color: #222; cursor: not-allowed; opacity: 0.7;}
+
+.input-group { display: flex; justify-content: space-between; margin-bottom: 15px;}
+input { padding: 10px; border-radius: 5px; border: none; width: 65%; font-size: 16px; background-color: #2a3a5a; color: white;}
+input::placeholder { color: #aaa; }
+
+button { background-color: #e94560; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 16px;}
+.input-group button { width: 30%; margin-top: 0; }
+button:disabled { background-color: #555; cursor: not-allowed; }
+.back-btn { background-color: transparent; border: 1px solid white; width: auto; padding: 5px 10px; font-size: 14px; margin-bottom: 15px;}
+
+ul { list-style-type: none; padding: 0; }
+li { background: #0f3460; margin: 5px 0; padding: 10px; border-radius: 5px; }
 
 .settings-box-container {
     background: #0f3460;
@@ -7,7 +46,7 @@
     margin-bottom: 20px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
 }
 
 .settings-row {
@@ -21,17 +60,38 @@ select {
     background: #16213e;
     color: white;
     border: 1px solid #e94560;
-    padding: 5px;
+    padding: 8px;
     border-radius: 5px;
     cursor: pointer;
+    font-size: 14px;
 }
 
-/* Style pour les joueurs déjà éliminés dans la liste de vote */
-.vote-btn.eliminated {
-    opacity: 0.4;
-    text-decoration: line-through;
-    pointer-events: none;
-    border-color: #555;
+/* Nouveaux compteurs stylés */
+.counter-group {
+    display: flex;
+    align-items: center;
+    background: #16213e;
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid #e94560;
+}
+.counter-btn {
+    width: 35px;
+    margin: 0;
+    border-radius: 0;
+    background-color: transparent;
+    font-size: 18px;
+    color: #e94560;
+}
+.counter-btn:hover { background-color: rgba(233, 69, 96, 0.2); }
+.counter-val {
+    width: 30px;
+    text-align: center;
+    font-weight: bold;
 }
 
-/* ... garde le reste du CSS précédent ... */
+.word-display { color: #e94560; font-size: 2.5em; margin: 20px 0; }
+
+.vote-btn { background-color: #0f3460; margin-bottom: 10px; border: 1px solid #e94560; }
+.vote-btn:hover { background-color: #e94560; }
+.vote-btn.eliminated { opacity: 0.4; text-decoration: line-through; pointer-events: none; border-color: #555; }
