@@ -66,6 +66,7 @@ const themes = {
 };
 
 let currentPool = [];
+let showHintsSetting = true;
 
 window.onload = function() {
     const list = document.getElementById("theme-list");
@@ -84,10 +85,16 @@ function startGame() {
         currentPool = currentPool.concat(themes[cb.value].items);
     });
 
-    if (currentPool.length === 0) return alert("Choisis un thème !");
+    if (currentPool.length === 0) return alert("Choisis au moins un thème !");
     
-    // Mélange
-    currentPool.sort(() => Math.random() - 0.5);
+    // On enregistre si l'utilisateur veut voir les astuces
+    showHintsSetting = document.getElementById("toggle-hints").checked;
+    
+    // Mélange (Fisher-Yates pour être sûr !)
+    for (let i = currentPool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [currentPool[i], currentPool[j]] = [currentPool[j], currentPool[i]];
+    }
     
     document.getElementById("setup-screen").classList.remove("active");
     document.getElementById("game-screen").classList.add("active");
@@ -101,7 +108,10 @@ function nextRound() {
     document.getElementById("secret-word-display").textContent = item.word;
     document.getElementById("geometry-hint").textContent = item.hint;
     
-    // Reset affichage
+    // On cache ou on affiche le bloc d'astuces selon le réglage
+    document.getElementById("hint-area").style.display = showHintsSetting ? "block" : "none";
+    
+    // Reset l'affichage pour le nouveau tour
     document.getElementById("secret-container").style.display = "none";
     document.getElementById("show-btn").style.display = "block";
     document.getElementById("next-btn").style.display = "none";
@@ -112,4 +122,3 @@ function revealSecret() {
     document.getElementById("show-btn").style.display = "none";
     document.getElementById("next-btn").style.display = "block";
 }
-
