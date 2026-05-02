@@ -4,7 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loup-Garou - Multijoueur</title>
-    <link rel="stylesheet" href="style.css?v=11">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0b0f19; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; text-align: center; }
+        #app { background-color: #16213e; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); width: 90%; max-width: 450px; margin: 20px auto; position: relative; overflow: hidden;}
+        .screen { display: none; }
+        .screen.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .input-zone { display: flex; flex-direction: column; gap: 15px; margin-top: 30px;}
+        input[type="text"], input[type="number"] { padding: 15px; border-radius: 8px; border: none; font-size: 16px; background-color: #2a3a5a; color: white; text-align: center; outline: none; transition: 0.3s;}
+        input[type="text"]:focus { box-shadow: 0 0 0 2px #e94560; }
+        input::placeholder { text-transform: none; opacity: 0.6; }
+        button { background-color: #e94560; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: 0.2s; margin-top: 10px;}
+        button:hover { background-color: #ff4a6a; transform: translateY(-2px); }
+        .kill-btn { background-color: #8b0000; padding: 8px 12px; font-size: 12px; width: auto; margin: 0; border-radius: 5px;}
+        .kill-btn:hover { background-color: #ff0000; }
+        .back-btn { background-color: transparent; border: 1px solid rgba(255,255,255,0.3); width: auto; padding: 8px 15px; font-size: 14px; margin-bottom: 20px;}
+        h1, h2, h3 { margin-top: 0; }
+        p { opacity: 0.8; margin-bottom: 5px;}
+        .highlight { color: #e94560; font-size: 1.5em; letter-spacing: 2px;}
+        ul { list-style-type: none; padding: 0; margin-top: 15px;}
+        li { background: #0f3460; margin: 8px 0; padding: 15px; border-radius: 8px; font-weight: bold; border-left: 4px solid #e94560; text-align: left; display: flex; align-items: center; justify-content: space-between; gap:10px;}
+        .settings-box-container { background: #0f3460; padding: 20px; border-radius: 12px; margin-top: 25px; text-align: left; border: 2px solid #e94560;}
+        .settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px;}
+        .theme-section { flex-direction: column; align-items: flex-start; gap: 10px; }
+        .role-label { display: flex; align-items: center; gap: 10px; font-size: 15px; background: #16213e; padding: 10px; border-radius: 8px; width: calc(100% - 20px); cursor: pointer;}
+        .custom-select { padding: 10px; border-radius: 8px; background: #2a3a5a; color: white; border: none; font-size: 14px; outline: none; width: 55%;}
+        .small-input { width: 60px !important; padding: 10px !important; border-radius: 8px; background: #2a3a5a; color: white; border: none; text-align: center; font-weight: bold; font-size: 16px;}
+        .custom-checkbox { width: 20px; height: 20px; accent-color: #e94560;}
+        .role-card { background: #0f3460; border: 3px dashed #e94560; border-radius: 15px; padding: 40px 20px; margin-top: 20px; cursor: pointer; user-select: none; transition: 0.2s; display: flex; align-items: center; justify-content: center; min-height: 100px;}
+        .role-card:active { transform: scale(0.95); background: #16213e;}
+        #dead-screen { background-color: #5a0000; color: white;}
+        .vote-panel { background: #1a1a2e; padding: 15px; border-radius: 10px; border: 1px solid #ffbc00; margin-top: 20px; }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -20,7 +51,7 @@
             </div>
         </div>
 
-        <!-- ECRAN DU SALON D'ATTENTE (LOBBY) -->
+        <!-- ECRAN LOBBY -->
         <div id="lobby-screen" class="screen">
             <h2>Salon : <span id="display-room-code" class="highlight"></span></h2>
             <p>Joueurs connectés : <span id="player-count">0</span></p>
@@ -29,10 +60,10 @@
             <div id="admin-panel" class="settings-box-container" style="display: none;">
                 <h3 style="margin-top: 0;">👑 Panneau Admin</h3>
                 <div class="settings-row">
-                    <label>Mode de jeu :</label>
+                    <label>Mode :</label>
                     <select id="game-mode" class="custom-select">
                         <option value="humain">🗣️ Narrateur Humain</option>
-                        <option value="auto">🤖 Narrateur Automatique (Bientôt)</option>
+                        <option value="auto">🤖 Mode Auto (Trop complexe pour l'instant)</option>
                     </select>
                 </div>
                 <div class="settings-row">
@@ -48,49 +79,62 @@
                 </div>
                 <button id="start-game-btn">Distribuer les rôles !</button>
             </div>
-            <p id="waiting-msg" style="color: #ffbc00; font-weight: bold; margin-top: 20px;">En attente de l'Admin pour lancer...</p>
+            <p id="waiting-msg" style="color: #ffbc00; font-weight: bold; margin-top: 20px;">En attente de l'Admin...</p>
         </div>
 
-        <!-- ECRAN DE JEU (JOUEURS) -->
+        <!-- ECRAN JOUEUR EN VIE -->
         <div id="game-screen" class="screen" style="position: relative;">
             <h2>Ton rôle secret est...</h2>
             <div class="role-card" id="role-card">
                 <p id="role-instruction" style="color:#888;">Reste appuyé ici pour voir</p>
-                <h1 id="my-role-display" style="display:none; color: #e94560; font-size: 2.2em; margin: 0;">???</h1>
+                <h1 id="my-role-display" style="display:none; color: #e94560; font-size: 2em; margin: 0;">???</h1>
             </div>
-            <p style="margin-top: 20px; opacity: 0.7;">Ne montre ton écran à personne !</p>
 
-            <!-- VOILE NOIR DE LA NUIT (S'active quand le narrateur clique sur Nuit) -->
-            <div id="night-cover" style="display:none; position:absolute; top:-30px; left:-30px; right:-30px; bottom:-30px; background:rgba(0,0,0,0.98); z-index:100; flex-direction:column; justify-content:center; align-items:center; border-radius: 15px;">
+            <!-- ZONE DE VOTE DU VILLAGE (Apparaît quand l'admin l'active) -->
+            <div id="vote-zone" class="vote-panel" style="display: none;">
+                <h3 style="color: #ffbc00; margin-top: 0;">🗳️ Vote du Village</h3>
+                <p style="font-size: 0.9em; margin-bottom: 15px;">Qui voulez-vous éliminer ?</p>
+                <div id="vote-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                <p id="my-vote-status" style="color: #e94560; font-weight: bold; margin-top: 10px;"></p>
+            </div>
+
+            <!-- VOILE NOIR DE LA NUIT -->
+            <div id="night-cover" style="display:none; position:absolute; top:-30px; left:-30px; right:-30px; bottom:-30px; background:rgba(0,0,0,0.98); z-index:100; flex-direction:column; justify-content:center; align-items:center;">
                 <h1 style="font-size: 4em; margin:0;">🌙</h1>
                 <h2>La nuit tombe...</h2>
                 <p style="color:#888;">Le village s'endort, fermez les yeux.</p>
             </div>
         </div>
 
-        <!-- ECRAN NARRATEUR (ADMIN) -->
+        <!-- ECRAN NARRATEUR -->
         <div id="narrator-screen" class="screen">
-            <h2>👁️ Tableau du Narrateur</h2>
+            <h2>👁️ Tableau de Bord</h2>
             
-            <!-- CONTRÔLES JOUR/NUIT -->
-            <div style="display:flex; gap:10px; margin-bottom: 20px;">
+            <div style="display:flex; gap:10px; margin-bottom: 15px;">
                 <button id="btn-night" style="background:#0a0a1a; border: 1px solid #555;">🌙 Nuit</button>
                 <button id="btn-day" style="background:#ffbc00; color: #000;">☀️ Jour</button>
             </div>
 
-            <p style="margin-bottom:5px;">Voici les rôles :</p>
+            <!-- CONTROLE DES VOTES -->
+            <div class="vote-panel" style="margin-bottom: 20px;">
+                <h3 style="margin-top: 0; color: #ffbc00;">🗳️ Tribunal du Village</h3>
+                <button id="btn-toggle-vote" style="background:#ffbc00; color: #000; margin-top: 0; padding: 10px;">Ouvrir les votes</button>
+                <ul id="vote-results" style="list-style: none; padding: 0; margin-top: 10px;"></ul>
+            </div>
+
+            <p style="margin-bottom:5px;">Rôles des joueurs :</p>
             <ul id="narrator-player-list"></ul>
-            <button onclick="location.reload()" style="background:#333; margin-top: 20px;">Mettre fin à la partie</button>
+            <button onclick="location.reload()" style="background:#333; margin-top: 20px;">Fin de partie</button>
         </div>
 
         <!-- ECRAN DE MORT -->
         <div id="dead-screen" class="screen">
             <h1 style="font-size: 3em; margin-bottom: 0;">💀</h1>
             <h1 style="color: white;">TU ES MORT</h1>
-            <p>Tu ne peux plus parler. Observe le reste de la partie en silence.</p>
+            <p>Tu ne peux plus parler ni voter.</p>
             <button onclick="location.reload()" style="background:#111; margin-top:30px;">Quitter</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=11"></script>
+    <script type="module" src="script.js?v=20"></script>
 </body>
 </html>
