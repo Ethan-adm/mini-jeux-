@@ -61,22 +61,26 @@
                 <div class="settings-row">
                     <label>Mode :</label>
                     <select id="game-mode" class="custom-select">
-                        <option value="auto">🤖 Narrateur Automatique</option>
-                        <option value="humain">🗣️ Narrateur Humain</option>
+                        <option value="auto">🤖 Narrateur Automatique (L'Admin joue)</option>
+                        <option value="humain">🗣️ Narrateur Humain (L'Admin anime)</option>
                     </select>
                 </div>
                 <div class="settings-row">
                     <label>🐺 Loups-Garous :</label>
                     <input type="number" id="wolf-count" value="1" min="1" max="5" class="small-input">
                 </div>
-                <p style="font-size:12px; color:#aaa;">(Voyante et Sorcière arriveront dans la V2 du mode Auto !)</p>
+                <div class="settings-row theme-section">
+                    <label>Rôles Spéciaux :</label>
+                    <label class="role-label"><input type="checkbox" id="role-voyante" class="custom-checkbox" checked> 👁️ Voyante</label>
+                    <label class="role-label"><input type="checkbox" id="role-sorciere" class="custom-checkbox" disabled> 🧙‍♀️ Sorcière (Prochainement)</label>
+                </div>
                 <button id="start-game-btn">Distribuer les rôles !</button>
             </div>
             <p id="waiting-msg" style="color: #ffbc00; font-weight: bold; margin-top: 20px;">En attente de l'Admin...</p>
         </div>
 
         <!-- ECRAN JOUEUR EN VIE -->
-        <div id="game-screen" class="screen" style="position: relative;">
+        <div id="game-screen" class="screen" style="position: relative; padding-bottom: 80px;">
             <h2>Ton rôle secret est...</h2>
             <div class="role-card" id="role-card">
                 <p id="role-instruction" style="color:#888;">Reste appuyé ici pour voir</p>
@@ -87,7 +91,7 @@
 
             <!-- ZONE DE VOTE -->
             <div id="vote-zone" class="vote-panel" style="display: none;">
-                <h3 id="vote-title" style="color: #ffbc00; margin-top: 0;">🗳️ Vote</h3>
+                <h3 id="vote-title" style="color: #ffbc00; margin-top: 0;">🗳️ Action</h3>
                 <div id="vote-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
                 <p id="my-vote-status" style="color: #e94560; font-weight: bold; margin-top: 10px;"></p>
             </div>
@@ -98,33 +102,27 @@
                 <h2>La nuit tombe...</h2>
                 <p style="color:#888;">Le village s'endort, fermez les yeux.</p>
             </div>
+
+            <!-- BARRE DE CONTRÔLE ADMIN (MODE AUTO) -->
+            <div id="admin-auto-bar" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #16213e; padding: 15px; z-index: 1000; justify-content: space-between; align-items: center; border-top: 2px solid #e94560;">
+                <div style="text-align: left;">
+                    <span style="font-weight: bold; font-size: 1.1em;">🤖 Mode Auto</span><br>
+                    <span id="vote-progress" style="font-size: 0.9em; color: #ffbc00;">0 vote(s)</span>
+                </div>
+                <button id="btn-next-phase" style="background: white; color: #e94560; width: auto; margin: 0; padding: 10px 20px;">Suivant ➡️</button>
+            </div>
         </div>
 
-        <!-- ECRAN NARRATEUR (ADMIN HUMAIN OU AUTO) -->
+        <!-- ECRAN NARRATEUR (MODE HUMAIN SEULEMENT) -->
         <div id="narrator-screen" class="screen">
             <h2 id="narrator-title">👁️ Tableau de Bord</h2>
-            
-            <!-- CONTROLE MODE AUTO -->
-            <div id="auto-controls" style="display: none; background: #e94560; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                <h3 style="margin-top:0;">🤖 Narrateur Auto</h3>
-                <p id="admin-auto-status">En attente...</p>
-                <button id="btn-next-phase" style="background: white; color: #e94560;">Passer à l'étape suivante ➡️</button>
+            <div style="display:flex; gap:10px; margin-bottom: 15px;">
+                <button id="btn-night" style="background:#0a0a1a; border: 1px solid #555;">🌙 Nuit</button>
+                <button id="btn-day" style="background:#ffbc00; color: #000;">☀️ Jour</button>
             </div>
-
-            <!-- CONTROLE MODE HUMAIN -->
-            <div id="human-controls" style="display: none;">
-                <div style="display:flex; gap:10px; margin-bottom: 15px;">
-                    <button id="btn-night" style="background:#0a0a1a; border: 1px solid #555;">🌙 Nuit</button>
-                    <button id="btn-day" style="background:#ffbc00; color: #000;">☀️ Jour</button>
-                </div>
-                <div class="vote-panel" style="margin-bottom: 20px;">
-                    <button id="btn-toggle-vote" style="background:#ffbc00; color: #000; margin-top: 0;">Ouvrir les votes Village</button>
-                </div>
+            <div class="vote-panel" style="margin-bottom: 20px;">
+                <button id="btn-toggle-vote" style="background:#ffbc00; color: #000; margin-top: 0;">Ouvrir les votes Village</button>
             </div>
-
-            <!-- RESULTATS DES VOTES -->
-            <ul id="vote-results" style="list-style: none; padding: 0; margin-top: 10px; border: 1px solid #ffbc00; border-radius: 8px;"></ul>
-
             <p style="margin-bottom:5px;">Rôles des joueurs :</p>
             <ul id="narrator-player-list"></ul>
             <button onclick="location.reload()" style="background:#333; margin-top: 20px;">Fin de partie</button>
@@ -134,10 +132,10 @@
         <div id="dead-screen" class="screen">
             <h1 style="font-size: 3em; margin-bottom: 0;">💀</h1>
             <h1 style="color: white;">TU ES MORT</h1>
-            <p>Tu ne peux plus parler ni voter.</p>
+            <p>Observe la suite de la partie en silence.</p>
             <button onclick="location.reload()" style="background:#111; margin-top:30px;">Quitter</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=30"></script>
+    <script type="module" src="script.js?v=40"></script>
 </body>
 </html>
