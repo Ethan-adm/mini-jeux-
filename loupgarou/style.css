@@ -26,11 +26,23 @@ body {
 input[type="text"] { padding: 15px; border-radius: 5px; border: none; font-size: 16px; background-color: #2a3a5a; color: white; text-align: center; text-transform: uppercase;}
 input::placeholder { text-transform: none; opacity: 0.7; }
 
-button { background-color: #e94560; color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px;}
+button { background-color: #e94560; color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: 0.2s;}
+button:hover { background-color: #ff4a6a; }
 .back-btn { background-color: transparent; border: 1px solid white; width: auto; padding: 5px 10px; font-size: 14px; margin-bottom: 15px;}
-.disabled-btn { background-color: #333; cursor: not-allowed; }
 
 .highlight { color: #e94560; font-size: 1.5em; letter-spacing: 2px;}
 
 ul { list-style-type: none; padding: 0; margin-top: 20px;}
 li { background: #0f3460; margin: 8px 0; padding: 12px; border-radius: 5px; font-weight: bold; border-left: 4px solid #e94560;}
+
+/* Styles de l'Admin */
+.settings-box-container { background: #0f3460; padding: 20px; border-radius: 10px; margin-top: 20px; text-align: left; border: 1px solid #e94560;}
+.settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px;}
+.theme-section { flex-direction: column; align-items: flex-start; gap: 10px; }
+.role-label { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.custom-select { padding: 8px; border-radius: 5px; background: #16213e; color: white; border: 1px solid white; }
+.small-input { width: 50px; padding: 5px; border-radius: 5px; background: #16213e; color: white; border: 1px solid white; text-align: center; font-weight: bold;}
+.custom-checkbox { width: 18px; height: 18px; accent-color: #e94560; }
+
+/* Carte Rôle Secret */
+.role-card { background: #0f3460; border: 3px dashed #e94560; border-radius: 15px; padding: 40px 20px; margin-top: 30px; cursor: pointer; user-select: none; }
