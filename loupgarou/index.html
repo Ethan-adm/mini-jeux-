@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loup-Garou - Multijoueur</title>
-    <!-- On lie le fichier CSS ici -->
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
     <div id="app">
@@ -27,7 +26,6 @@
             <p>Joueurs connectés : <span id="player-count">0</span></p>
             <ul id="player-list"></ul>
 
-            <!-- PANNEAU CACHÉ (VISIBLE QUE POUR L'ADMIN) -->
             <div id="admin-panel" class="settings-box-container" style="display: none;">
                 <h3 style="margin-top: 0;">👑 Panneau Admin</h3>
                 <div class="settings-row">
@@ -53,20 +51,34 @@
             <p id="waiting-msg" style="color: #ffbc00; font-weight: bold; margin-top: 20px;">En attente de l'Admin pour lancer...</p>
         </div>
 
-        <!-- ECRAN DE JEU (DÉCOUVERTE DU RÔLE - JOUEUR NORMAL) -->
-        <div id="game-screen" class="screen">
+        <!-- ECRAN DE JEU (JOUEURS) -->
+        <div id="game-screen" class="screen" style="position: relative;">
             <h2>Ton rôle secret est...</h2>
             <div class="role-card" id="role-card">
                 <p id="role-instruction" style="color:#888;">Reste appuyé ici pour voir</p>
                 <h1 id="my-role-display" style="display:none; color: #e94560; font-size: 2.2em; margin: 0;">???</h1>
             </div>
             <p style="margin-top: 20px; opacity: 0.7;">Ne montre ton écran à personne !</p>
+
+            <!-- VOILE NOIR DE LA NUIT (S'active quand le narrateur clique sur Nuit) -->
+            <div id="night-cover" style="display:none; position:absolute; top:-30px; left:-30px; right:-30px; bottom:-30px; background:rgba(0,0,0,0.98); z-index:100; flex-direction:column; justify-content:center; align-items:center; border-radius: 15px;">
+                <h1 style="font-size: 4em; margin:0;">🌙</h1>
+                <h2>La nuit tombe...</h2>
+                <p style="color:#888;">Le village s'endort, fermez les yeux.</p>
+            </div>
         </div>
 
-        <!-- ECRAN NARRATEUR (ADMIN SEULEMENT) -->
+        <!-- ECRAN NARRATEUR (ADMIN) -->
         <div id="narrator-screen" class="screen">
             <h2>👁️ Tableau du Narrateur</h2>
-            <p>Tu diriges la partie. Voici les rôles :</p>
+            
+            <!-- CONTRÔLES JOUR/NUIT -->
+            <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                <button id="btn-night" style="background:#0a0a1a; border: 1px solid #555;">🌙 Nuit</button>
+                <button id="btn-day" style="background:#ffbc00; color: #000;">☀️ Jour</button>
+            </div>
+
+            <p style="margin-bottom:5px;">Voici les rôles :</p>
             <ul id="narrator-player-list"></ul>
             <button onclick="location.reload()" style="background:#333; margin-top: 20px;">Mettre fin à la partie</button>
         </div>
@@ -79,7 +91,6 @@
             <button onclick="location.reload()" style="background:#111; margin-top:30px;">Quitter</button>
         </div>
     </div>
-    <!-- On lie le fichier JavaScript ici -->
-    <script type="module" src="script.js?v=10"></script>
+    <script type="module" src="script.js?v=11"></script>
 </body>
 </html>
