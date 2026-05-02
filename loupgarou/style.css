@@ -1,5 +1,5 @@
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0b0f19; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; text-align: center; }
-#app { background-color: #16213e; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); width: 90%; max-width: 450px; margin: 20px auto; }
+#app { background-color: #16213e; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); width: 90%; max-width: 450px; margin: 20px auto; position: relative; overflow: hidden;}
 .screen { display: none; }
 .screen.active { display: block; animation: fadeIn 0.3s ease-in-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -16,7 +16,7 @@ h1, h2, h3 { margin-top: 0; }
 p { opacity: 0.8; }
 .highlight { color: #e94560; font-size: 1.5em; letter-spacing: 2px;}
 ul { list-style-type: none; padding: 0; margin-top: 20px;}
-li { background: #0f3460; margin: 8px 0; padding: 15px; border-radius: 8px; font-weight: bold; border-left: 4px solid #e94560; text-align: left; display: flex; align-items: center; justify-content: space-between;}
+li { background: #0f3460; margin: 8px 0; padding: 15px; border-radius: 8px; font-weight: bold; border-left: 4px solid #e94560; text-align: left; display: flex; align-items: center; justify-content: space-between; gap:10px;}
 .settings-box-container { background: #0f3460; padding: 20px; border-radius: 12px; margin-top: 25px; text-align: left; border: 2px solid #e94560;}
 .settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px;}
 .theme-section { flex-direction: column; align-items: flex-start; gap: 10px; }
