@@ -18,7 +18,18 @@ let myPlayerId = "joueur_" + Math.random().toString(36).substr(2, 9);
 let currentRoom = "";
 let amIAdmin = false;
 let currentPlayers = {}; 
-let isVoteOpen = false;
+let gameMode = "humain";
+let currentPhase = ""; // Pour le mode auto
+
+// --- FONCTION POUR FAIRE PARLER LE TELEPHONE ---
+function parler(texte) {
+    if ('speechSynthesis' in window) {
+        const voix = new SpeechSynthesisUtterance(texte);
+        voix.lang = 'fr-FR';
+        voix.rate = 0.9; // Vitesse un peu lente pour faire peur
+        window.speechSynthesis.speak(voix);
+    }
+}
 
 // 1. REJOINDRE
 document.getElementById('join-btn').addEventListener('click', () => {
@@ -40,8 +51,9 @@ document.getElementById('join-btn').addEventListener('click', () => {
 
     if (amIAdmin) {
         set(ref(db, `rooms/${room}/status`), "lobby");
-        set(ref(db, `rooms/${room}/phase`), "day");
         set(ref(db, `rooms/${room}/voteActive`), false);
+        set(ref(db, `rooms/${room}/wolfVoteActive`), false);
+        set(ref(db, `rooms/${room}/autoPhase`), "start");
     }
 
     document.getElementById('login-screen').classList.remove('active');
@@ -56,75 +68,98 @@ document.getElementById('join-btn').addEventListener('click', () => {
     // ECOUTE JOUEURS
     onValue(ref(db, `rooms/${room}/players`), (snapshot) => {
         currentPlayers = snapshot.val() || {};
-        
         if(document.getElementById('lobby-screen').classList.contains('active')) updateLobby(currentPlayers);
         if(document.getElementById('narrator-screen').classList.contains('active')) updateNarratorScreen(currentPlayers);
 
-        // Si on meurt
-        if(currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead) {
+        if(currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead && document.getElementById('game-screen').classList.contains('active')) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById('dead-screen').classList.add('active');
         }
-        
-        // Rafraichir la liste des votes si on est en train de voter
-        if(document.getElementById('vote-zone').style.display === "block") renderVoteButtons();
     });
 
     // ECOUTE LANCEMENT JEU
     onValue(ref(db, `rooms/${room}/status`), (snapshot) => {
         if (snapshot.val() === "role_reveal") {
             onValue(ref(db, `rooms/${room}/mode`), (modeSnap) => {
-                if (modeSnap.val() === "humain" && amIAdmin) showNarratorScreen();
-                else showRoleScreen();
+                gameMode = modeSnap.val();
+                if (amIAdmin) {
+                    showNarratorScreen();
+                    document.getElementById(gameMode === "auto" ? 'auto-controls' : 'human-controls').style.display = "block";
+                } else {
+                    showRoleScreen();
+                }
             }, {onlyOnce: true});
         }
     });
 
-    // ECOUTE JOUR/NUIT
-    onValue(ref(db, `rooms/${room}/phase`), (snapshot) => {
-        const nightCover = document.getElementById('night-cover');
-        if (nightCover) nightCover.style.display = snapshot.val() === 'night' ? 'flex' : 'none';
-    });
-
-    // ECOUTE OUVERTURE DES VOTES (POUR LES JOUEURS)
-    onValue(ref(db, `rooms/${room}/voteActive`), (snapshot) => {
-        const active = snapshot.val();
-        const voteZone = document.getElementById('vote-zone');
+    // ==========================================
+    // MOTEUR DU MODE AUTOMATIQUE (POUR LES JOUEURS)
+    // ==========================================
+    onValue(ref(db, `rooms/${room}/autoPhase`), (snapshot) => {
+        if(gameMode !== "auto") return;
+        const phase = snapshot.val();
+        currentPhase = phase;
         
-        if (active && !currentPlayers[myPlayerId].isDead && !amIAdmin && document.getElementById('game-screen').classList.contains('active')) {
-            voteZone.style.display = "block";
-            document.getElementById('my-vote-status').textContent = "";
-            renderVoteButtons();
-        } else {
-            if(voteZone) voteZone.style.display = "none";
+        const nightCover = document.getElementById('night-cover');
+        const msgDisplay = document.getElementById('auto-narrator-msg');
+        const autoBox = document.getElementById('auto-narrator-display');
+
+        // Réinitialiser les votes à chaque phase
+        document.getElementById('vote-zone').style.display = "none";
+
+        if (phase === "nuit") {
+            nightCover.style.display = 'flex';
+            parler("La nuit tombe sur le village. Tout le monde ferme les yeux.");
+        } 
+        else if (phase === "loups") {
+            if (currentPlayers[myPlayerId].role === "🐺 Loup-Garou" && !currentPlayers[myPlayerId].isDead) {
+                nightCover.style.display = 'none'; // Les loups se réveillent
+                document.getElementById('vote-zone').style.display = "block";
+                document.getElementById('vote-title').textContent = "🐺 Vote des Loups (Choisis ta victime)";
+                renderVoteButtons("loups");
+                parler("Les loups-garous se réveillent, et choisissent leur victime.");
+            } else {
+                nightCover.style.display = 'flex'; // Les autres dorment
+            }
+        }
+        else if (phase === "jour") {
+            nightCover.style.display = 'none';
+            autoBox.style.display = "block";
+            autoBox.textContent = "Le soleil se lève sur le village... Regardez qui est mort.";
+            parler("Le soleil se lève. Le village se réveille... et découvre les morts.");
+            
+            // Le calcul des morts se fait par l'admin au clic, les joueurs le verront direct via 'isDead'
+        }
+        else if (phase === "vote_village") {
+            nightCover.style.display = 'none';
+            if (!currentPlayers[myPlayerId].isDead) {
+                document.getElementById('vote-zone').style.display = "block";
+                document.getElementById('vote-title').textContent = "🗳️ Vote du Village";
+                renderVoteButtons("village");
+                parler("C'est l'heure du vote. Le village doit éliminer un suspect.");
+            }
         }
     });
 
-    // ECOUTE DES RESULTATS DE VOTE (POUR LE NARRATEUR)
+    // ECOUTE DES VOTES (NARRATEUR HUMAIN & AUTO)
     onValue(ref(db, `rooms/${room}/votes`), (snapshot) => {
         if(!amIAdmin) return;
         const votes = snapshot.val() || {};
         const results = {};
-        let total = 0;
-        
-        for(let voter in votes) {
-            results[votes[voter]] = (results[votes[voter]] || 0) + 1;
-            total++;
-        }
+        for(let voter in votes) results[votes[voter]] = (results[votes[voter]] || 0) + 1;
 
         const list = document.getElementById('vote-results');
-        list.innerHTML = `<p style="margin:0 0 10px 0; font-size:0.9em; color:#aaa;">Votes reçus : ${total}</p>`;
-        
-        // Trier par nombre de votes
+        list.innerHTML = "";
         Object.entries(results).sort((a,b) => b[1] - a[1]).forEach(([name, count]) => {
             const li = document.createElement('li');
-            li.style.padding = "5px"; li.style.margin = "0"; li.style.background = "transparent"; li.style.border = "none";
+            li.style.padding = "5px"; li.style.background = "transparent"; li.style.border = "none";
             li.innerHTML = `<strong>${name}</strong> : <span style="color:#e94560">${count} voix</span>`;
             list.appendChild(li);
         });
     });
 });
 
+// 2. AFFICHER LOBBY
 function updateLobby(players) {
     const list = document.getElementById('player-list');
     list.innerHTML = "";
@@ -137,19 +172,22 @@ function updateLobby(players) {
     }
 }
 
+// 3. LANCER ET DISTRIBUER
 document.getElementById('start-game-btn').addEventListener('click', () => {
     const mode = document.getElementById('game-mode').value;
-    if (mode === "auto") return alert("Le mode Automatique n'est pas encore codé ! Utilise Humain.");
-    
     const allIds = Object.keys(currentPlayers).filter(id => id !== myPlayerId);
     if (allIds.length === 0) return alert("Il faut des joueurs !");
 
     const rolesPool = [];
     for(let i=0; i<parseInt(document.getElementById('wolf-count').value); i++) rolesPool.push("🐺 Loup-Garou");
-    if(document.getElementById('role-voyante').checked) rolesPool.push("👁️ Voyante");
-    if(document.getElementById('role-sorciere').checked) rolesPool.push("🧙‍♀️ Sorcière");
-    if(document.getElementById('role-cupidon').checked) rolesPool.push("🏹 Cupidon");
-    if(document.getElementById('role-chasseur').checked) rolesPool.push("🔫 Chasseur");
+    
+    // Pour la V1 du mode auto, on limite aux Loups et Villageois
+    if (mode === "humain") {
+        if(document.getElementById('role-voyante').checked) rolesPool.push("👁️ Voyante");
+        if(document.getElementById('role-sorciere').checked) rolesPool.push("🧙‍♀️ Sorcière");
+        if(document.getElementById('role-cupidon').checked) rolesPool.push("🏹 Cupidon");
+        if(document.getElementById('role-chasseur').checked) rolesPool.push("🔫 Chasseur");
+    }
 
     if (rolesPool.length > allIds.length) return alert("Trop de rôles spéciaux !");
     while(rolesPool.length < allIds.length) rolesPool.push("🧑‍🌾 Simple Villageois");
@@ -170,6 +208,8 @@ function showRoleScreen() {
     document.getElementById('lobby-screen').classList.remove('active');
     document.getElementById('game-screen').classList.add('active');
     document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId].role;
+    
+    // Pour que la voix s'active, il faut une interaction de l'utilisateur (cliquer sur la carte role)
 }
 
 function showNarratorScreen() {
@@ -198,36 +238,41 @@ function updateNarratorScreen(players) {
     }
 }
 
-// GESTION JOUR/NUIT
-document.getElementById('btn-night').addEventListener('click', () => update(ref(db, `rooms/${currentRoom}`), { phase: 'night' }));
-document.getElementById('btn-day').addEventListener('click', () => update(ref(db, `rooms/${currentRoom}`), { phase: 'day' }));
+// ==========================================
+// MOTEUR ADMIN : MODE AUTOMATIQUE
+// ==========================================
+let autoSteps = ["nuit", "loups", "jour", "vote_village"];
+let currentStepIndex = -1;
 
-// GESTION DU VOTE (ADMIN)
-document.getElementById('btn-toggle-vote').addEventListener('click', () => {
-    isVoteOpen = !isVoteOpen;
-    const btn = document.getElementById('btn-toggle-vote');
-    if (isVoteOpen) {
-        update(ref(db, `rooms/${currentRoom}`), { voteActive: true, votes: null });
-        btn.textContent = "Fermer les votes"; btn.style.background = "#e94560"; btn.style.color = "white";
-    } else {
-        update(ref(db, `rooms/${currentRoom}`), { voteActive: false });
-        btn.textContent = "Ouvrir les votes"; btn.style.background = "#ffbc00"; btn.style.color = "black";
-    }
+document.getElementById('btn-next-phase').addEventListener('click', () => {
+    currentStepIndex++;
+    if(currentStepIndex >= autoSteps.length) currentStepIndex = 0; // On boucle
+    
+    const nextPhase = autoSteps[currentStepIndex];
+    document.getElementById('admin-auto-status').textContent = `Phase en cours : ${nextPhase.toUpperCase()}`;
+    
+    // On efface les votes précédents à chaque nouvelle phase
+    update(ref(db, `rooms/${currentRoom}`), { autoPhase: nextPhase, votes: null });
 });
 
-// AFFICHER BOUTONS DE VOTE (JOUEURS)
-function renderVoteButtons() {
+// ==========================================
+// FONCTIONS DE VOTE (JOUEURS)
+// ==========================================
+function renderVoteButtons(type) {
     const list = document.getElementById('vote-list');
     list.innerHTML = "";
     for (let id in currentPlayers) {
-        if (id === myPlayerId || currentPlayers[id].isDead || !currentPlayers[id].role || currentPlayers[id].role === "En attente") continue;
+        if (id === myPlayerId || currentPlayers[id].isDead || currentPlayers[id].role === "En attente") continue;
         
+        // Un loup ne peut pas voter contre un autre loup pendant la nuit
+        if (type === "loups" && currentPlayers[id].role === "🐺 Loup-Garou") continue;
+
         const btn = document.createElement('button');
         btn.textContent = currentPlayers[id].name;
         btn.style.background = "#2a3a5a"; btn.style.padding = "10px"; btn.style.margin = "0";
         btn.onclick = () => {
             set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), currentPlayers[id].name);
-            document.getElementById('my-vote-status').textContent = `Tu as voté contre ${currentPlayers[id].name}`;
+            document.getElementById('my-vote-status').textContent = `Choix validé : ${currentPlayers[id].name}`;
         };
         list.appendChild(btn);
     }
@@ -235,7 +280,7 @@ function renderVoteButtons() {
 
 // CARTE ROLE
 const roleCard = document.getElementById('role-card'), roleDisplay = document.getElementById('my-role-display'), roleInst = document.getElementById('role-instruction');
-const show = () => { roleDisplay.style.display = "block"; roleInst.style.display = "none"; };
+const show = () => { roleDisplay.style.display = "block"; roleInst.style.display = "none"; window.speechSynthesis.resume(); };
 const hide = () => { roleDisplay.style.display = "none"; roleInst.style.display = "block"; };
 roleCard.addEventListener('mousedown', show); roleCard.addEventListener('touchstart', show);
 roleCard.addEventListener('mouseup', hide); roleCard.addEventListener('touchend', hide);
