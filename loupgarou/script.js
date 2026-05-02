@@ -39,6 +39,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
 
     if (amIAdmin) {
         set(ref(db, `rooms/${room}/status`), "lobby");
+        set(ref(db, `rooms/${room}/phase`), "day"); // Initialiser le jour
     }
 
     document.getElementById('login-screen').classList.remove('active');
@@ -50,7 +51,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         document.getElementById('waiting-msg').style.display = "none";
     }
 
-    // ECOUTE DE LA BASE DE DONNEES
+    // ECOUTE DE LA BASE DE DONNEES (JOUEURS)
     onValue(ref(db, `rooms/${room}/players`), (snapshot) => {
         currentPlayers = snapshot.val() || {};
         
@@ -68,6 +69,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         }
     });
 
+    // ECOUTE DU STATUT DE JEU
     onValue(ref(db, `rooms/${room}/status`), (snapshot) => {
         if (snapshot.val() === "role_reveal") {
             onValue(ref(db, `rooms/${room}/mode`), (modeSnap) => {
@@ -78,6 +80,19 @@ document.getElementById('join-btn').addEventListener('click', () => {
                     showRoleScreen();
                 }
             }, {onlyOnce: true});
+        }
+    });
+
+    // ECOUTE DU CYCLE JOUR/NUIT
+    onValue(ref(db, `rooms/${room}/phase`), (snapshot) => {
+        const phase = snapshot.val();
+        const nightCover = document.getElementById('night-cover');
+        if (nightCover) {
+            if (phase === 'night') {
+                nightCover.style.display = 'flex';
+            } else {
+                nightCover.style.display = 'none';
+            }
         }
     });
 });
@@ -143,6 +158,7 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
     
     updates[`rooms/${currentRoom}/status`] = "role_reveal";
     updates[`rooms/${currentRoom}/mode`] = mode;
+    updates[`rooms/${currentRoom}/phase`] = "day"; // On commence de jour
 
     update(ref(db), updates);
 });
@@ -193,6 +209,14 @@ window.killPlayer = function(targetId) {
         });
     }
 }
+
+// GESTION JOUR/NUIT PAR LE NARRATEUR
+document.getElementById('btn-night').addEventListener('click', () => {
+    update(ref(db, `rooms/${currentRoom}`), { phase: 'night' });
+});
+document.getElementById('btn-day').addEventListener('click', () => {
+    update(ref(db, `rooms/${currentRoom}`), { phase: 'day' });
+});
 
 // 6. CACHER/AFFICHER CARTE ROLE
 const roleCard = document.getElementById('role-card');
