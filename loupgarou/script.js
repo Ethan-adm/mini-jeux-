@@ -19,14 +19,18 @@ let currentRoom = "";
 let amIAdmin = false;
 let currentPlayers = {}; 
 let gameMode = "humain";
-let currentPhase = ""; // Pour le mode auto
 
-// --- FONCTION POUR FAIRE PARLER LE TELEPHONE ---
-function parler(texte) {
+// --- GESTION DE LA VOIX (Une seule fois par étape) ---
+let lastSpokenPhase = "";
+function parler(texte, phase) {
+    if (lastSpokenPhase === phase) return; // Empêche de répéter la même chose
+    lastSpokenPhase = phase;
+    
     if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); 
         const voix = new SpeechSynthesisUtterance(texte);
         voix.lang = 'fr-FR';
-        voix.rate = 0.9; // Vitesse un peu lente pour faire peur
+        voix.rate = 0.95;
         window.speechSynthesis.speak(voix);
     }
 }
@@ -52,8 +56,8 @@ document.getElementById('join-btn').addEventListener('click', () => {
     if (amIAdmin) {
         set(ref(db, `rooms/${room}/status`), "lobby");
         set(ref(db, `rooms/${room}/voteActive`), false);
-        set(ref(db, `rooms/${room}/wolfVoteActive`), false);
         set(ref(db, `rooms/${room}/autoPhase`), "start");
+        set(ref(db, `rooms/${room}/votes`), null);
     }
 
     document.getElementById('login-screen').classList.remove('active');
@@ -82,84 +86,86 @@ document.getElementById('join-btn').addEventListener('click', () => {
         if (snapshot.val() === "role_reveal") {
             onValue(ref(db, `rooms/${room}/mode`), (modeSnap) => {
                 gameMode = modeSnap.val();
-                if (amIAdmin) {
+                if (gameMode === "humain" && amIAdmin) {
                     showNarratorScreen();
-                    document.getElementById(gameMode === "auto" ? 'auto-controls' : 'human-controls').style.display = "block";
                 } else {
                     showRoleScreen();
+                    // Si on est Admin ET en mode Auto, on affiche la petite barre de contrôle en bas
+                    if (gameMode === "auto" && amIAdmin) {
+                        document.getElementById('admin-auto-bar').style.display = "flex";
+                    }
                 }
             }, {onlyOnce: true});
         }
     });
 
+    // ECOUTE DU VOTE (Compteur pour l'admin)
+    onValue(ref(db, `rooms/${room}/votes`), (snapshot) => {
+        const votes = snapshot.val() || {};
+        const count = Object.keys(votes).length;
+        document.getElementById('vote-progress').textContent = `${count} vote(s) validé(s)`;
+    });
+
     // ==========================================
-    // MOTEUR DU MODE AUTOMATIQUE (POUR LES JOUEURS)
+    // MOTEUR DU MODE AUTOMATIQUE
     // ==========================================
     onValue(ref(db, `rooms/${room}/autoPhase`), (snapshot) => {
         if(gameMode !== "auto") return;
         const phase = snapshot.val();
-        currentPhase = phase;
         
         const nightCover = document.getElementById('night-cover');
-        const msgDisplay = document.getElementById('auto-narrator-msg');
         const autoBox = document.getElementById('auto-narrator-display');
+        const voteZone = document.getElementById('vote-zone');
 
-        // Réinitialiser les votes à chaque phase
-        document.getElementById('vote-zone').style.display = "none";
+        voteZone.style.display = "none";
+        document.getElementById('my-vote-status').textContent = "";
 
         if (phase === "nuit") {
             nightCover.style.display = 'flex';
-            parler("La nuit tombe sur le village. Tout le monde ferme les yeux.");
+            autoBox.style.display = 'none';
+            parler("La nuit tombe sur le village. Tout le monde ferme les yeux.", phase);
         } 
-        else if (phase === "loups") {
-            if (currentPlayers[myPlayerId].role === "🐺 Loup-Garou" && !currentPlayers[myPlayerId].isDead) {
-                nightCover.style.display = 'none'; // Les loups se réveillent
-                document.getElementById('vote-zone').style.display = "block";
-                document.getElementById('vote-title').textContent = "🐺 Vote des Loups (Choisis ta victime)";
-                renderVoteButtons("loups");
-                parler("Les loups-garous se réveillent, et choisissent leur victime.");
+        else if (phase === "voyante") {
+            parler("La voyante se réveille, et désigne un joueur pour voir son rôle.", phase);
+            if (currentPlayers[myPlayerId].role === "👁️ Voyante" && !currentPlayers[myPlayerId].isDead) {
+                nightCover.style.display = 'none';
+                voteZone.style.display = "block";
+                document.getElementById('vote-title').textContent = "👁️ Choisis qui inspecter";
+                renderVoteButtons("voyante");
             } else {
-                nightCover.style.display = 'flex'; // Les autres dorment
+                nightCover.style.display = 'flex';
+            }
+        }
+        else if (phase === "loups") {
+            parler("Les loups-garous se réveillent, et choisissent leur victime.", phase);
+            if (currentPlayers[myPlayerId].role === "🐺 Loup-Garou" && !currentPlayers[myPlayerId].isDead) {
+                nightCover.style.display = 'none';
+                voteZone.style.display = "block";
+                document.getElementById('vote-title').textContent = "🐺 Votez pour la victime";
+                renderVoteButtons("loups");
+            } else {
+                nightCover.style.display = 'flex';
             }
         }
         else if (phase === "jour") {
             nightCover.style.display = 'none';
             autoBox.style.display = "block";
-            autoBox.textContent = "Le soleil se lève sur le village... Regardez qui est mort.";
-            parler("Le soleil se lève. Le village se réveille... et découvre les morts.");
-            
-            // Le calcul des morts se fait par l'admin au clic, les joueurs le verront direct via 'isDead'
+            autoBox.textContent = "Le soleil se lève sur le village... L'admin va annoncer les morts !";
+            parler("Le soleil se lève. Le village se réveille.", phase);
         }
         else if (phase === "vote_village") {
             nightCover.style.display = 'none';
+            autoBox.style.display = 'none';
             if (!currentPlayers[myPlayerId].isDead) {
-                document.getElementById('vote-zone').style.display = "block";
+                voteZone.style.display = "block";
                 document.getElementById('vote-title').textContent = "🗳️ Vote du Village";
                 renderVoteButtons("village");
-                parler("C'est l'heure du vote. Le village doit éliminer un suspect.");
+                parler("C'est l'heure du vote. Le village doit éliminer un suspect.", phase);
             }
         }
     });
-
-    // ECOUTE DES VOTES (NARRATEUR HUMAIN & AUTO)
-    onValue(ref(db, `rooms/${room}/votes`), (snapshot) => {
-        if(!amIAdmin) return;
-        const votes = snapshot.val() || {};
-        const results = {};
-        for(let voter in votes) results[votes[voter]] = (results[votes[voter]] || 0) + 1;
-
-        const list = document.getElementById('vote-results');
-        list.innerHTML = "";
-        Object.entries(results).sort((a,b) => b[1] - a[1]).forEach(([name, count]) => {
-            const li = document.createElement('li');
-            li.style.padding = "5px"; li.style.background = "transparent"; li.style.border = "none";
-            li.innerHTML = `<strong>${name}</strong> : <span style="color:#e94560">${count} voix</span>`;
-            list.appendChild(li);
-        });
-    });
 });
 
-// 2. AFFICHER LOBBY
 function updateLobby(players) {
     const list = document.getElementById('player-list');
     list.innerHTML = "";
@@ -175,22 +181,20 @@ function updateLobby(players) {
 // 3. LANCER ET DISTRIBUER
 document.getElementById('start-game-btn').addEventListener('click', () => {
     const mode = document.getElementById('game-mode').value;
-    const allIds = Object.keys(currentPlayers).filter(id => id !== myPlayerId);
-    if (allIds.length === 0) return alert("Il faut des joueurs !");
+    const allIds = Object.keys(currentPlayers);
+    
+    // Si mode humain, l'admin ne joue pas. Si mode auto, TOUT LE MONDE JOUE !
+    let playersToAssign = mode === "humain" ? allIds.filter(id => id !== myPlayerId) : allIds;
+
+    if (playersToAssign.length === 0) return alert("Il faut des joueurs !");
 
     const rolesPool = [];
     for(let i=0; i<parseInt(document.getElementById('wolf-count').value); i++) rolesPool.push("🐺 Loup-Garou");
     
-    // Pour la V1 du mode auto, on limite aux Loups et Villageois
-    if (mode === "humain") {
-        if(document.getElementById('role-voyante').checked) rolesPool.push("👁️ Voyante");
-        if(document.getElementById('role-sorciere').checked) rolesPool.push("🧙‍♀️ Sorcière");
-        if(document.getElementById('role-cupidon').checked) rolesPool.push("🏹 Cupidon");
-        if(document.getElementById('role-chasseur').checked) rolesPool.push("🔫 Chasseur");
-    }
+    if(document.getElementById('role-voyante').checked) rolesPool.push("👁️ Voyante");
 
-    if (rolesPool.length > allIds.length) return alert("Trop de rôles spéciaux !");
-    while(rolesPool.length < allIds.length) rolesPool.push("🧑‍🌾 Simple Villageois");
+    if (rolesPool.length > playersToAssign.length) return alert("Trop de rôles spéciaux pour le nombre de joueurs !");
+    while(rolesPool.length < playersToAssign.length) rolesPool.push("🧑‍🌾 Simple Villageois");
 
     for (let i = rolesPool.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -198,7 +202,7 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
     }
 
     let updates = {};
-    allIds.forEach((id, i) => updates[`rooms/${currentRoom}/players/${id}/role`] = rolesPool[i]);
+    playersToAssign.forEach((id, i) => updates[`rooms/${currentRoom}/players/${id}/role`] = rolesPool[i]);
     updates[`rooms/${currentRoom}/status`] = "role_reveal";
     updates[`rooms/${currentRoom}/mode`] = mode;
     update(ref(db), updates);
@@ -208,8 +212,6 @@ function showRoleScreen() {
     document.getElementById('lobby-screen').classList.remove('active');
     document.getElementById('game-screen').classList.add('active');
     document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId].role;
-    
-    // Pour que la voix s'active, il faut une interaction de l'utilisateur (cliquer sur la carte role)
 }
 
 function showNarratorScreen() {
@@ -218,61 +220,46 @@ function showNarratorScreen() {
     updateNarratorScreen(currentPlayers);
 }
 
-function updateNarratorScreen(players) {
-    const list = document.getElementById('narrator-player-list');
-    list.innerHTML = "";
-    for (let id in players) {
-        if (id === myPlayerId) continue;
-        const p = players[id];
-        const li = document.createElement('li');
-        if(p.isDead) {
-            li.innerHTML = `<span style="text-decoration:line-through; color:#888;">${p.name}</span> <span style="color:#ff0000">Mort</span>`;
-        } else {
-            li.innerHTML = `<span>${p.name} <br><small style="color:#e94560">${p.role}</small></span>`;
-            const btn = document.createElement('button');
-            btn.className = "kill-btn"; btn.textContent = "Tuer 💀";
-            btn.onclick = () => { if(confirm("Tuer " + p.name + " ?")) update(ref(db, `rooms/${currentRoom}/players/${id}`), {isDead: true}); };
-            li.appendChild(btn);
-        }
-        list.appendChild(li);
-    }
-}
-
 // ==========================================
-// MOTEUR ADMIN : MODE AUTOMATIQUE
+// MOTEUR ADMIN : BOUTON SUIVANT MODE AUTO
 // ==========================================
-let autoSteps = ["nuit", "loups", "jour", "vote_village"];
+let autoSteps = ["nuit", "voyante", "loups", "jour", "vote_village"];
 let currentStepIndex = -1;
 
 document.getElementById('btn-next-phase').addEventListener('click', () => {
     currentStepIndex++;
-    if(currentStepIndex >= autoSteps.length) currentStepIndex = 0; // On boucle
+    if(currentStepIndex >= autoSteps.length) currentStepIndex = 0; // Boucle
     
     const nextPhase = autoSteps[currentStepIndex];
-    document.getElementById('admin-auto-status').textContent = `Phase en cours : ${nextPhase.toUpperCase()}`;
-    
-    // On efface les votes précédents à chaque nouvelle phase
+    // On efface les anciens votes pour repartir à 0
     update(ref(db, `rooms/${currentRoom}`), { autoPhase: nextPhase, votes: null });
 });
 
 // ==========================================
-// FONCTIONS DE VOTE (JOUEURS)
+// FONCTION D'ACTIONS/VOTES (JOUEURS)
 // ==========================================
 function renderVoteButtons(type) {
     const list = document.getElementById('vote-list');
     list.innerHTML = "";
     for (let id in currentPlayers) {
-        if (id === myPlayerId || currentPlayers[id].isDead || currentPlayers[id].role === "En attente") continue;
+        if (id === myPlayerId || currentPlayers[id].isDead || !currentPlayers[id].role) continue;
         
-        // Un loup ne peut pas voter contre un autre loup pendant la nuit
+        // Un loup ne vote pas contre un loup
         if (type === "loups" && currentPlayers[id].role === "🐺 Loup-Garou") continue;
 
         const btn = document.createElement('button');
         btn.textContent = currentPlayers[id].name;
         btn.style.background = "#2a3a5a"; btn.style.padding = "10px"; btn.style.margin = "0";
+        
         btn.onclick = () => {
-            set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), currentPlayers[id].name);
-            document.getElementById('my-vote-status').textContent = `Choix validé : ${currentPlayers[id].name}`;
+            if (type === "voyante") {
+                // La voyante voit direct le rôle, ça ne va pas dans les votes du village
+                document.getElementById('my-vote-status').textContent = `Tu as vu : ${currentPlayers[id].name} est ${currentPlayers[id].role}`;
+            } else {
+                // Les autres votes s'enregistrent sur Firebase
+                set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), currentPlayers[id].name);
+                document.getElementById('my-vote-status').textContent = `Choix validé : ${currentPlayers[id].name}`;
+            }
         };
         list.appendChild(btn);
     }
