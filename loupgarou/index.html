@@ -72,7 +72,9 @@
                 <div class="settings-row theme-section">
                     <label>Rôles Spéciaux :</label>
                     <label class="role-label"><input type="checkbox" id="role-voyante" class="custom-checkbox" checked> 👁️ Voyante</label>
-                    <label class="role-label"><input type="checkbox" id="role-sorciere" class="custom-checkbox" disabled> 🧙‍♀️ Sorcière (Prochainement)</label>
+                    <label class="role-label"><input type="checkbox" id="role-sorciere" class="custom-checkbox" checked> 🧙‍♀️ Sorcière</label>
+                    <label class="role-label"><input type="checkbox" id="role-cupidon" class="custom-checkbox"> 🏹 Cupidon</label>
+                    <label class="role-label"><input type="checkbox" id="role-chasseur" class="custom-checkbox"> 🔫 Chasseur</label>
                 </div>
                 <button id="start-game-btn">Distribuer les rôles !</button>
             </div>
@@ -107,7 +109,7 @@
             <div id="admin-auto-bar" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #16213e; padding: 15px; z-index: 1000; justify-content: space-between; align-items: center; border-top: 2px solid #e94560;">
                 <div style="text-align: left;">
                     <span style="font-weight: bold; font-size: 1.1em;">🤖 Mode Auto</span><br>
-                    <span id="vote-progress" style="font-size: 0.9em; color: #ffbc00;">0 vote(s)</span>
+                    <span id="vote-progress" style="font-size: 0.9em; color: #ffbc00;">0 action(s) validée(s)</span>
                 </div>
                 <button id="btn-next-phase" style="background: white; color: #e94560; width: auto; margin: 0; padding: 10px 20px;">Suivant ➡️</button>
             </div>
@@ -136,6 +138,6 @@
             <button onclick="location.reload()" style="background:#111; margin-top:30px;">Quitter</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=40"></script>
+    <script type="module" src="script.js?v=50"></script>
 </body>
 </html>
