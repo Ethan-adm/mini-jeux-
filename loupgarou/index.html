@@ -15,7 +15,7 @@
             <p>Multijoueur en direct</p>
 
             <div class="input-zone">
-                <input type="text" id="player-name" placeholder="Ton pseudo (ex: Ethan)" maxlength="12">
+                <input type="text" id="player-name" placeholder="Ton pseudo (Taper 'admin' pour être chef)" maxlength="12">
                 <input type="text" id="room-code" placeholder="Code du salon (ex: 1234)" maxlength="6">
                 <button id="join-btn">Rejoindre la partie</button>
             </div>
@@ -26,15 +26,51 @@
             <h2>Salon : <span id="display-room-code" class="highlight"></span></h2>
             <p>Joueurs connectés : <span id="player-count">0</span></p>
             
-            <ul id="player-list">
-                <!-- Les joueurs apparaîtront ici en direct -->
-            </ul>
+            <ul id="player-list"></ul>
 
-            <button id="start-game-btn" class="disabled-btn">Lancer la partie (Bientôt)</button>
+            <!-- PANNEAU CACHÉ (VISIBLE QUE POUR L'ADMIN) -->
+            <div id="admin-panel" class="settings-box-container" style="display: none;">
+                <h3 style="margin-top: 0;">👑 Panneau Admin</h3>
+                
+                <div class="settings-row">
+                    <label>Mode de jeu :</label>
+                    <select id="game-mode" class="custom-select">
+                        <option value="auto">🤖 Narrateur Automatique</option>
+                        <option value="humain">🗣️ Narrateur Humain</option>
+                    </select>
+                </div>
+
+                <div class="settings-row">
+                    <label>🐺 Loups-Garous :</label>
+                    <input type="number" id="wolf-count" value="1" min="1" max="5" class="small-input">
+                </div>
+
+                <div class="settings-row theme-section">
+                    <label>Rôles Spéciaux :</label>
+                    <label class="role-label"><input type="checkbox" id="role-voyante" class="custom-checkbox" checked> 👁️ Voyante</label>
+                    <label class="role-label"><input type="checkbox" id="role-sorciere" class="custom-checkbox" checked> 🧙‍♀️ Sorcière</label>
+                    <label class="role-label"><input type="checkbox" id="role-cupidon" class="custom-checkbox"> 🏹 Cupidon</label>
+                    <label class="role-label"><input type="checkbox" id="role-chasseur" class="custom-checkbox"> 🔫 Chasseur</label>
+                </div>
+
+                <button id="start-game-btn">Distribuer les rôles !</button>
+            </div>
+
+            <!-- MESSAGE POUR LES JOUEURS NORMAUX -->
+            <p id="waiting-msg" style="color: #ffbc00; font-weight: bold; margin-top: 20px;">En attente de l'Admin pour lancer...</p>
+        </div>
+
+        <!-- ECRAN DE JEU (DÉCOUVERTE DU RÔLE) -->
+        <div id="game-screen" class="screen">
+            <h2>Ton rôle secret est...</h2>
+            <div class="role-card" id="role-card">
+                <p id="role-instruction">Reste appuyé ici pour voir</p>
+                <h1 id="my-role-display" style="display:none; color: #e94560; font-size: 2.5em; margin: 0;">???</h1>
+            </div>
+            <p style="margin-top: 20px; opacity: 0.7;">Ne montre ton écran à personne !</p>
         </div>
     </div>
 
-    <!-- On charge le script en mode "module" pour Firebase -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
