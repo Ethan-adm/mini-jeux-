@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loup-Garou - Multijoueur</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ECRAN DE CONNEXION -->
+        <div id="login-screen" class="screen active">
+            <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
+            <h1>🐺 Loup-Garou</h1>
+            <p>Multijoueur en direct</p>
+
+            <div class="input-zone">
+                <input type="text" id="player-name" placeholder="Ton pseudo (ex: Ethan)" maxlength="12">
+                <input type="text" id="room-code" placeholder="Code du salon (ex: 1234)" maxlength="6">
+                <button id="join-btn">Rejoindre la partie</button>
+            </div>
+        </div>
+
+        <!-- ECRAN DU SALON D'ATTENTE (LOBBY) -->
+        <div id="lobby-screen" class="screen">
+            <h2>Salon : <span id="display-room-code" class="highlight"></span></h2>
+            <p>Joueurs connectés : <span id="player-count">0</span></p>
+            
+            <ul id="player-list">
+                <!-- Les joueurs apparaîtront ici en direct -->
+            </ul>
+
+            <button id="start-game-btn" class="disabled-btn">Lancer la partie (Bientôt)</button>
+        </div>
+    </div>
+
+    <!-- On charge le script en mode "module" pour Firebase -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
