@@ -18,8 +18,9 @@ let myPlayerId = "joueur_" + Math.random().toString(36).substr(2, 9);
 let currentRoom = "";
 let amIAdmin = false;
 let currentPlayers = {}; 
+let isVoteOpen = false;
 
-// 1. REJOINDRE LA PARTIE
+// 1. REJOINDRE
 document.getElementById('join-btn').addEventListener('click', () => {
     let name = document.getElementById('player-name').value.trim();
     const room = document.getElementById('room-code').value.trim().toUpperCase();
@@ -39,7 +40,8 @@ document.getElementById('join-btn').addEventListener('click', () => {
 
     if (amIAdmin) {
         set(ref(db, `rooms/${room}/status`), "lobby");
-        set(ref(db, `rooms/${room}/phase`), "day"); // Initialiser le jour
+        set(ref(db, `rooms/${room}/phase`), "day");
+        set(ref(db, `rooms/${room}/voteActive`), false);
     }
 
     document.getElementById('login-screen').classList.remove('active');
@@ -51,100 +53,106 @@ document.getElementById('join-btn').addEventListener('click', () => {
         document.getElementById('waiting-msg').style.display = "none";
     }
 
-    // ECOUTE DE LA BASE DE DONNEES (JOUEURS)
+    // ECOUTE JOUEURS
     onValue(ref(db, `rooms/${room}/players`), (snapshot) => {
         currentPlayers = snapshot.val() || {};
         
-        if(document.getElementById('lobby-screen').classList.contains('active')){
-            updateLobby(currentPlayers);
-        }
-        
-        if(document.getElementById('narrator-screen').classList.contains('active')){
-            updateNarratorScreen(currentPlayers);
-        }
+        if(document.getElementById('lobby-screen').classList.contains('active')) updateLobby(currentPlayers);
+        if(document.getElementById('narrator-screen').classList.contains('active')) updateNarratorScreen(currentPlayers);
 
+        // Si on meurt
         if(currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById('dead-screen').classList.add('active');
         }
+        
+        // Rafraichir la liste des votes si on est en train de voter
+        if(document.getElementById('vote-zone').style.display === "block") renderVoteButtons();
     });
 
-    // ECOUTE DU STATUT DE JEU
+    // ECOUTE LANCEMENT JEU
     onValue(ref(db, `rooms/${room}/status`), (snapshot) => {
         if (snapshot.val() === "role_reveal") {
             onValue(ref(db, `rooms/${room}/mode`), (modeSnap) => {
-                const mode = modeSnap.val();
-                if (mode === "humain" && amIAdmin) {
-                    showNarratorScreen();
-                } else {
-                    showRoleScreen();
-                }
+                if (modeSnap.val() === "humain" && amIAdmin) showNarratorScreen();
+                else showRoleScreen();
             }, {onlyOnce: true});
         }
     });
 
-    // ECOUTE DU CYCLE JOUR/NUIT
+    // ECOUTE JOUR/NUIT
     onValue(ref(db, `rooms/${room}/phase`), (snapshot) => {
-        const phase = snapshot.val();
         const nightCover = document.getElementById('night-cover');
-        if (nightCover) {
-            if (phase === 'night') {
-                nightCover.style.display = 'flex';
-            } else {
-                nightCover.style.display = 'none';
-            }
+        if (nightCover) nightCover.style.display = snapshot.val() === 'night' ? 'flex' : 'none';
+    });
+
+    // ECOUTE OUVERTURE DES VOTES (POUR LES JOUEURS)
+    onValue(ref(db, `rooms/${room}/voteActive`), (snapshot) => {
+        const active = snapshot.val();
+        const voteZone = document.getElementById('vote-zone');
+        
+        if (active && !currentPlayers[myPlayerId].isDead && !amIAdmin && document.getElementById('game-screen').classList.contains('active')) {
+            voteZone.style.display = "block";
+            document.getElementById('my-vote-status').textContent = "";
+            renderVoteButtons();
+        } else {
+            if(voteZone) voteZone.style.display = "none";
         }
+    });
+
+    // ECOUTE DES RESULTATS DE VOTE (POUR LE NARRATEUR)
+    onValue(ref(db, `rooms/${room}/votes`), (snapshot) => {
+        if(!amIAdmin) return;
+        const votes = snapshot.val() || {};
+        const results = {};
+        let total = 0;
+        
+        for(let voter in votes) {
+            results[votes[voter]] = (results[votes[voter]] || 0) + 1;
+            total++;
+        }
+
+        const list = document.getElementById('vote-results');
+        list.innerHTML = `<p style="margin:0 0 10px 0; font-size:0.9em; color:#aaa;">Votes reçus : ${total}</p>`;
+        
+        // Trier par nombre de votes
+        Object.entries(results).sort((a,b) => b[1] - a[1]).forEach(([name, count]) => {
+            const li = document.createElement('li');
+            li.style.padding = "5px"; li.style.margin = "0"; li.style.background = "transparent"; li.style.border = "none";
+            li.innerHTML = `<strong>${name}</strong> : <span style="color:#e94560">${count} voix</span>`;
+            list.appendChild(li);
+        });
     });
 });
 
-// 2. AFFICHER LOBBY
-function updateLobby(playersData) {
+function updateLobby(players) {
     const list = document.getElementById('player-list');
     list.innerHTML = "";
-    let count = 0;
-    for (let id in playersData) {
-        count++;
+    document.getElementById('player-count').textContent = Object.keys(players).length;
+    for (let id in players) {
         const li = document.createElement('li');
-        li.textContent = playersData[id].name;
+        li.textContent = players[id].name;
         if (id === myPlayerId) { li.textContent += " (Toi)"; li.style.color = "#e94560"; }
         list.appendChild(li);
     }
-    document.getElementById('player-count').textContent = count;
 }
 
-// 3. LANCER ET DISTRIBUER
 document.getElementById('start-game-btn').addEventListener('click', () => {
     const mode = document.getElementById('game-mode').value;
-    const allIds = Object.keys(currentPlayers);
+    if (mode === "auto") return alert("Le mode Automatique n'est pas encore codé ! Utilise Humain.");
     
-    let playersToAssign = allIds;
-    if (mode === "humain") {
-        playersToAssign = allIds.filter(id => id !== myPlayerId);
-    }
+    const allIds = Object.keys(currentPlayers).filter(id => id !== myPlayerId);
+    if (allIds.length === 0) return alert("Il faut des joueurs !");
 
-    const totalPlayers = playersToAssign.length;
-    if (totalPlayers === 0) return alert("Il faut des joueurs pour lancer !");
+    const rolesPool = [];
+    for(let i=0; i<parseInt(document.getElementById('wolf-count').value); i++) rolesPool.push("🐺 Loup-Garou");
+    if(document.getElementById('role-voyante').checked) rolesPool.push("👁️ Voyante");
+    if(document.getElementById('role-sorciere').checked) rolesPool.push("🧙‍♀️ Sorcière");
+    if(document.getElementById('role-cupidon').checked) rolesPool.push("🏹 Cupidon");
+    if(document.getElementById('role-chasseur').checked) rolesPool.push("🔫 Chasseur");
 
-    const wolfCount = parseInt(document.getElementById('wolf-count').value);
-    const hasVoyante = document.getElementById('role-voyante').checked;
-    const hasSorciere = document.getElementById('role-sorciere').checked;
-    const hasCupidon = document.getElementById('role-cupidon').checked;
-    const hasChasseur = document.getElementById('role-chasseur').checked;
-
-    let rolesPool = [];
-    for(let i=0; i<wolfCount; i++) rolesPool.push("🐺 Loup-Garou");
-    if(hasVoyante) rolesPool.push("👁️ Voyante");
-    if(hasSorciere) rolesPool.push("🧙‍♀️ Sorcière");
-    if(hasCupidon) rolesPool.push("🏹 Cupidon");
-    if(hasChasseur) rolesPool.push("🔫 Chasseur");
-
-    if (rolesPool.length > totalPlayers) {
-        return alert("Trop de rôles spéciaux pour le nombre de joueurs !");
-    }
-
-    while(rolesPool.length < totalPlayers) {
-        rolesPool.push("🧑‍🌾 Simple Villageois");
-    }
+    if (rolesPool.length > allIds.length) return alert("Trop de rôles spéciaux !");
+    while(rolesPool.length < allIds.length) rolesPool.push("🧑‍🌾 Simple Villageois");
 
     for (let i = rolesPool.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -152,18 +160,12 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
     }
 
     let updates = {};
-    playersToAssign.forEach((id, index) => {
-        updates[`rooms/${currentRoom}/players/${id}/role`] = rolesPool[index];
-    });
-    
+    allIds.forEach((id, i) => updates[`rooms/${currentRoom}/players/${id}/role`] = rolesPool[i]);
     updates[`rooms/${currentRoom}/status`] = "role_reveal";
     updates[`rooms/${currentRoom}/mode`] = mode;
-    updates[`rooms/${currentRoom}/phase`] = "day"; // On commence de jour
-
     update(ref(db), updates);
 });
 
-// 4. ECRANS
 function showRoleScreen() {
     document.getElementById('lobby-screen').classList.remove('active');
     document.getElementById('game-screen').classList.add('active');
@@ -176,54 +178,64 @@ function showNarratorScreen() {
     updateNarratorScreen(currentPlayers);
 }
 
-// 5. TABLEAU DE BORD NARRATEUR
-function updateNarratorScreen(playersData) {
+function updateNarratorScreen(players) {
     const list = document.getElementById('narrator-player-list');
     list.innerHTML = "";
-    
-    for (let id in playersData) {
+    for (let id in players) {
         if (id === myPlayerId) continue;
-        
-        const player = playersData[id];
+        const p = players[id];
         const li = document.createElement('li');
-        
-        if(player.isDead) {
-            li.innerHTML = `<span style="text-decoration:line-through; color:#888;">${player.name} (${player.role})</span> <span style="color:#ff0000">Mort</span>`;
+        if(p.isDead) {
+            li.innerHTML = `<span style="text-decoration:line-through; color:#888;">${p.name}</span> <span style="color:#ff0000">Mort</span>`;
         } else {
-            li.innerHTML = `<span>${player.name} <br><small style="color:#e94560">${player.role}</small></span>`;
-            
-            const killBtn = document.createElement('button');
-            killBtn.className = "kill-btn";
-            killBtn.textContent = "Tuer 💀";
-            killBtn.onclick = () => killPlayer(id);
-            li.appendChild(killBtn);
+            li.innerHTML = `<span>${p.name} <br><small style="color:#e94560">${p.role}</small></span>`;
+            const btn = document.createElement('button');
+            btn.className = "kill-btn"; btn.textContent = "Tuer 💀";
+            btn.onclick = () => { if(confirm("Tuer " + p.name + " ?")) update(ref(db, `rooms/${currentRoom}/players/${id}`), {isDead: true}); };
+            li.appendChild(btn);
         }
         list.appendChild(li);
     }
 }
 
-window.killPlayer = function(targetId) {
-    if(confirm("Tuer " + currentPlayers[targetId].name + " ?")) {
-        update(ref(db, `rooms/${currentRoom}/players/${targetId}`), {
-            isDead: true
-        });
+// GESTION JOUR/NUIT
+document.getElementById('btn-night').addEventListener('click', () => update(ref(db, `rooms/${currentRoom}`), { phase: 'night' }));
+document.getElementById('btn-day').addEventListener('click', () => update(ref(db, `rooms/${currentRoom}`), { phase: 'day' }));
+
+// GESTION DU VOTE (ADMIN)
+document.getElementById('btn-toggle-vote').addEventListener('click', () => {
+    isVoteOpen = !isVoteOpen;
+    const btn = document.getElementById('btn-toggle-vote');
+    if (isVoteOpen) {
+        update(ref(db, `rooms/${currentRoom}`), { voteActive: true, votes: null });
+        btn.textContent = "Fermer les votes"; btn.style.background = "#e94560"; btn.style.color = "white";
+    } else {
+        update(ref(db, `rooms/${currentRoom}`), { voteActive: false });
+        btn.textContent = "Ouvrir les votes"; btn.style.background = "#ffbc00"; btn.style.color = "black";
+    }
+});
+
+// AFFICHER BOUTONS DE VOTE (JOUEURS)
+function renderVoteButtons() {
+    const list = document.getElementById('vote-list');
+    list.innerHTML = "";
+    for (let id in currentPlayers) {
+        if (id === myPlayerId || currentPlayers[id].isDead || !currentPlayers[id].role || currentPlayers[id].role === "En attente") continue;
+        
+        const btn = document.createElement('button');
+        btn.textContent = currentPlayers[id].name;
+        btn.style.background = "#2a3a5a"; btn.style.padding = "10px"; btn.style.margin = "0";
+        btn.onclick = () => {
+            set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), currentPlayers[id].name);
+            document.getElementById('my-vote-status').textContent = `Tu as voté contre ${currentPlayers[id].name}`;
+        };
+        list.appendChild(btn);
     }
 }
 
-// GESTION JOUR/NUIT PAR LE NARRATEUR
-document.getElementById('btn-night').addEventListener('click', () => {
-    update(ref(db, `rooms/${currentRoom}`), { phase: 'night' });
-});
-document.getElementById('btn-day').addEventListener('click', () => {
-    update(ref(db, `rooms/${currentRoom}`), { phase: 'day' });
-});
-
-// 6. CACHER/AFFICHER CARTE ROLE
-const roleCard = document.getElementById('role-card');
-const roleDisplay = document.getElementById('my-role-display');
-const roleInst = document.getElementById('role-instruction');
-
-roleCard.addEventListener('mousedown', () => { roleDisplay.style.display = "block"; roleInst.style.display = "none"; });
-roleCard.addEventListener('touchstart', () => { roleDisplay.style.display = "block"; roleInst.style.display = "none"; });
-roleCard.addEventListener('mouseup', () => { roleDisplay.style.display = "none"; roleInst.style.display = "block"; });
-roleCard.addEventListener('touchend', () => { roleDisplay.style.display = "none"; roleInst.style.display = "block"; });
+// CARTE ROLE
+const roleCard = document.getElementById('role-card'), roleDisplay = document.getElementById('my-role-display'), roleInst = document.getElementById('role-instruction');
+const show = () => { roleDisplay.style.display = "block"; roleInst.style.display = "none"; };
+const hide = () => { roleDisplay.style.display = "none"; roleInst.style.display = "block"; };
+roleCard.addEventListener('mousedown', show); roleCard.addEventListener('touchstart', show);
+roleCard.addEventListener('mouseup', hide); roleCard.addEventListener('touchend', hide);
