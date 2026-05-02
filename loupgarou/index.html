@@ -1,76 +1,212 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loup-Garou - Multijoueur</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="app">
-        <!-- ECRAN DE CONNEXION -->
-        <div id="login-screen" class="screen active">
-            <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
-            <h1>🐺 Loup-Garou</h1>
-            <p>Multijoueur en direct</p>
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, onDisconnect, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-            <div class="input-zone">
-                <input type="text" id="player-name" placeholder="Ton pseudo (Taper 'admin' pour être chef)" maxlength="12">
-                <input type="text" id="room-code" placeholder="Code du salon (ex: 1234)" maxlength="6">
-                <button id="join-btn">Rejoindre la partie</button>
-            </div>
-        </div>
+const firebaseConfig = {
+    apiKey: "AIzaSyDTX0_aUssO0gzY5YrnXJWYtsC1SKkWKZQ",
+    authDomain: "minijeux-ethan.firebaseapp.com",
+    databaseURL: "https://minijeux-ethan-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "minijeux-ethan",
+    storageBucket: "minijeux-ethan.firebasestorage.app",
+    messagingSenderId: "494501305767",
+    appId: "1:494501305767:web:48a4acd2e836f68f036a82"
+};
 
-        <!-- ECRAN DU SALON D'ATTENTE (LOBBY) -->
-        <div id="lobby-screen" class="screen">
-            <h2>Salon : <span id="display-room-code" class="highlight"></span></h2>
-            <p>Joueurs connectés : <span id="player-count">0</span></p>
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let myPlayerId = "joueur_" + Math.random().toString(36).substr(2, 9);
+let currentRoom = "";
+let amIAdmin = false;
+let currentPlayers = {}; 
+
+// 1. REJOINDRE LA PARTIE
+document.getElementById('join-btn').addEventListener('click', () => {
+    let name = document.getElementById('player-name').value.trim();
+    const room = document.getElementById('room-code').value.trim().toUpperCase();
+
+    if (!name || !room) return alert("Saisis un pseudo et un code !");
+
+    if (name.toLowerCase() === "admin") {
+        amIAdmin = true;
+        name = "👑 Admin"; 
+    }
+
+    currentRoom = room;
+    const playerRef = ref(db, `rooms/${room}/players/${myPlayerId}`);
+    onDisconnect(playerRef).remove(); 
+
+    set(playerRef, { name: name, role: "En attente", isDead: false });
+
+    if (amIAdmin) {
+        set(ref(db, `rooms/${room}/status`), "lobby");
+    }
+
+    document.getElementById('login-screen').classList.remove('active');
+    document.getElementById('lobby-screen').classList.add('active');
+    document.getElementById('display-room-code').textContent = room;
+
+    if (amIAdmin) {
+        document.getElementById('admin-panel').style.display = "block";
+        document.getElementById('waiting-msg').style.display = "none";
+    }
+
+    // ECOUTE DE LA BASE DE DONNEES
+    onValue(ref(db, `rooms/${room}/players`), (snapshot) => {
+        currentPlayers = snapshot.val() || {};
+        
+        // Mettre à jour l'écran de lobby si on y est
+        if(document.getElementById('lobby-screen').classList.contains('active')){
+            updateLobby(currentPlayers);
+        }
+        
+        // Mettre à jour l'écran narrateur si on y est
+        if(document.getElementById('narrator-screen').classList.contains('active')){
+            updateNarratorScreen(currentPlayers);
+        }
+
+        // Vérifier si ON EST MORT
+        if(currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('dead-screen').classList.add('active');
+        }
+    });
+
+    onValue(ref(db, `rooms/${room}/status`), (snapshot) => {
+        if (snapshot.val() === "role_reveal") {
+            onValue(ref(db, `rooms/${room}/mode`), (modeSnap) => {
+                const mode = modeSnap.val();
+                // Si mode humain et qu'on est l'admin, on devient le Narrateur
+                if (mode === "humain" && amIAdmin) {
+                    showNarratorScreen();
+                } else {
+                    showRoleScreen();
+                }
+            }, {onlyOnce: true});
+        }
+    });
+});
+
+// 2. AFFICHER LOBBY
+function updateLobby(playersData) {
+    const list = document.getElementById('player-list');
+    list.innerHTML = "";
+    let count = 0;
+    for (let id in playersData) {
+        count++;
+        const li = document.createElement('li');
+        li.textContent = playersData[id].name;
+        if (id === myPlayerId) { li.textContent += " (Toi)"; li.style.color = "#e94560"; }
+        list.appendChild(li);
+    }
+    document.getElementById('player-count').textContent = count;
+}
+
+// 3. LANCER ET DISTRIBUER
+document.getElementById('start-game-btn').addEventListener('click', () => {
+    const mode = document.getElementById('game-mode').value;
+    const allIds = Object.keys(currentPlayers);
+    
+    // Si mode humain, l'admin ne joue pas, il narre.
+    let playersToAssign = allIds;
+    if (mode === "humain") {
+        playersToAssign = allIds.filter(id => id !== myPlayerId);
+    }
+
+    const totalPlayers = playersToAssign.length;
+    if (totalPlayers === 0) return alert("Il faut des joueurs pour lancer !");
+
+    const wolfCount = parseInt(document.getElementById('wolf-count').value);
+    const hasVoyante = document.getElementById('role-voyante').checked;
+    const hasSorciere = document.getElementById('role-sorciere').checked;
+    const hasCupidon = document.getElementById('role-cupidon').checked;
+    const hasChasseur = document.getElementById('role-chasseur').checked;
+
+    let rolesPool = [];
+    for(let i=0; i<wolfCount; i++) rolesPool.push("🐺 Loup-Garou");
+    if(hasVoyante) rolesPool.push("👁️ Voyante");
+    if(hasSorciere) rolesPool.push("🧙‍♀️ Sorcière");
+    if(hasCupidon) rolesPool.push("🏹 Cupidon");
+    if(hasChasseur) rolesPool.push("🔫 Chasseur");
+
+    if (rolesPool.length > totalPlayers) {
+        return alert("Trop de rôles spéciaux pour le nombre de joueurs !");
+    }
+
+    while(rolesPool.length < totalPlayers) {
+        rolesPool.push("🧑‍🌾 Simple Villageois");
+    }
+
+    // Mélange
+    for (let i = rolesPool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rolesPool[i], rolesPool[j]] = [rolesPool[j], rolesPool[i]];
+    }
+
+    let updates = {};
+    playersToAssign.forEach((id, index) => {
+        updates[`rooms/${currentRoom}/players/${id}/role`] = rolesPool[index];
+    });
+    
+    updates[`rooms/${currentRoom}/status`] = "role_reveal";
+    updates[`rooms/${currentRoom}/mode`] = mode;
+
+    update(ref(db), updates);
+});
+
+// 4. ECRANS
+function showRoleScreen() {
+    document.getElementById('lobby-screen').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+    document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId].role;
+}
+
+function showNarratorScreen() {
+    document.getElementById('lobby-screen').classList.remove('active');
+    document.getElementById('narrator-screen').classList.add('active');
+    updateNarratorScreen(currentPlayers);
+}
+
+// 5. TABLEAU DE BORD NARRATEUR
+function updateNarratorScreen(playersData) {
+    const list = document.getElementById('narrator-player-list');
+    list.innerHTML = "";
+    
+    for (let id in playersData) {
+        if (id === myPlayerId) continue; // L'admin ne s'affiche pas lui-même
+        
+        const player = playersData[id];
+        const li = document.createElement('li');
+        
+        if(player.isDead) {
+            li.innerHTML = `<span style="text-decoration:line-through; color:#888;">${player.name} (${player.role})</span> <span style="color:#ff0000">Mort</span>`;
+        } else {
+            li.innerHTML = `<span>${player.name} <br><small style="color:#e94560">${player.role}</small></span>`;
             
-            <ul id="player-list"></ul>
+            const killBtn = document.createElement('button');
+            killBtn.className = "kill-btn";
+            killBtn.textContent = "Tuer 💀";
+            killBtn.onclick = () => killPlayer(id);
+            li.appendChild(killBtn);
+        }
+        list.appendChild(li);
+    }
+}
 
-            <!-- PANNEAU CACHÉ (VISIBLE QUE POUR L'ADMIN) -->
-            <div id="admin-panel" class="settings-box-container" style="display: none;">
-                <h3 style="margin-top: 0;">👑 Panneau Admin</h3>
-                
-                <div class="settings-row">
-                    <label>Mode de jeu :</label>
-                    <select id="game-mode" class="custom-select">
-                        <option value="auto">🤖 Narrateur Automatique</option>
-                        <option value="humain">🗣️ Narrateur Humain</option>
-                    </select>
-                </div>
+// Fonction pour tuer quelqu'un (mise en globale pour le onclick)
+window.killPlayer = function(targetId) {
+    if(confirm("Tuer " + currentPlayers[targetId].name + " ?")) {
+        update(ref(db, `rooms/${currentRoom}/players/${targetId}`), {
+            isDead: true
+        });
+    }
+}
 
-                <div class="settings-row">
-                    <label>🐺 Loups-Garous :</label>
-                    <input type="number" id="wolf-count" value="1" min="1" max="5" class="small-input">
-                </div>
+// 6. CACHER/AFFICHER CARTE ROLE
+const roleCard = document.getElementById('role-card');
+const roleDisplay = document.getElementById('my-role-display');
+const roleInst = document.getElementById('role-instruction');
 
-                <div class="settings-row theme-section">
-                    <label>Rôles Spéciaux :</label>
-                    <label class="role-label"><input type="checkbox" id="role-voyante" class="custom-checkbox" checked> 👁️ Voyante</label>
-                    <label class="role-label"><input type="checkbox" id="role-sorciere" class="custom-checkbox" checked> 🧙‍♀️ Sorcière</label>
-                    <label class="role-label"><input type="checkbox" id="role-cupidon" class="custom-checkbox"> 🏹 Cupidon</label>
-                    <label class="role-label"><input type="checkbox" id="role-chasseur" class="custom-checkbox"> 🔫 Chasseur</label>
-                </div>
-
-                <button id="start-game-btn">Distribuer les rôles !</button>
-            </div>
-
-            <!-- MESSAGE POUR LES JOUEURS NORMAUX -->
-            <p id="waiting-msg" style="color: #ffbc00; font-weight: bold; margin-top: 20px;">En attente de l'Admin pour lancer...</p>
-        </div>
-
-        <!-- ECRAN DE JEU (DÉCOUVERTE DU RÔLE) -->
-        <div id="game-screen" class="screen">
-            <h2>Ton rôle secret est...</h2>
-            <div class="role-card" id="role-card">
-                <p id="role-instruction">Reste appuyé ici pour voir</p>
-                <h1 id="my-role-display" style="display:none; color: #e94560; font-size: 2.5em; margin: 0;">???</h1>
-            </div>
-            <p style="margin-top: 20px; opacity: 0.7;">Ne montre ton écran à personne !</p>
-        </div>
-    </div>
-
-    <script type="module" src="script.js"></script>
-</body>
-</html>
+roleCard.addEventListener('mousedown', () => { roleDisplay.style.display = "block"; roleInst.style.display = "none"; });
+roleCard.addEventListener('touchstart', () => { roleDisplay.style.display = "block"; roleInst.style.display = "none"; });
+roleCard.addEventListener('mouseup', () => { roleDisplay.style.display = "none"; roleInst.style.display = "block"; });
+roleCard.addEventListener('touchend', () => { roleDisplay.style.display = "none"; roleInst.style.display = "block"; });
