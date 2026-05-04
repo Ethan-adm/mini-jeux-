@@ -38,6 +38,7 @@
         .target-btn:hover { background: #3a4a6a; }
         #btn-confirm-action { background-color: #28a745; margin-top: 15px; font-size: 1.1em;}
         #btn-confirm-action:hover { background-color: #34ce57; }
+        .witch-section { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #9b59b6;}
     </style>
 </head>
 <body>
@@ -73,13 +74,24 @@
                     <label>🐺 Loups-Garous :</label>
                     <input type="number" id="wolf-count" value="1" min="1" max="5" class="small-input">
                 </div>
-                <div class="settings-row theme-section">
+                
+                <hr style="border: 1px solid #16213e; margin: 15px 0;">
+                
+                <div class="theme-section">
                     <label>Rôles Spéciaux :</label>
                     <label class="role-label"><input type="checkbox" id="role-voyante" class="custom-checkbox" checked> 👁️ Voyante</label>
                     <label class="role-label"><input type="checkbox" id="role-sorciere" class="custom-checkbox" checked> 🧙‍♀️ Sorcière</label>
                     <label class="role-label"><input type="checkbox" id="role-cupidon" class="custom-checkbox"> 🏹 Cupidon</label>
-                    <label class="role-label"><input type="checkbox" id="role-chasseur" class="custom-checkbox"> 🔫 Chasseur</label>
+                    <label class="role-label"><input type="checkbox" id="role-chasseur" class="custom-checkbox" checked> 🔫 Chasseur</label>
                 </div>
+
+                <hr style="border: 1px solid #16213e; margin: 15px 0;">
+
+                <div class="theme-section">
+                    <label>Règles :</label>
+                    <label class="role-label"><input type="checkbox" id="reveal-roles-death" class="custom-checkbox" checked> 🪦 Révéler le rôle des morts</label>
+                </div>
+
                 <button id="start-game-btn">Distribuer les rôles !</button>
             </div>
             <p id="waiting-msg" style="color: #ffbc00; font-weight: bold; margin-top: 20px;">En attente de l'Admin...</p>
@@ -98,6 +110,20 @@
             <!-- ZONE DE VOTE (AVEC CONFIRMATION) -->
             <div id="vote-zone" class="vote-panel" style="display: none;">
                 <h3 id="vote-title" style="color: #ffbc00; margin-top: 0;">🗳️ Action</h3>
+                
+                <!-- Zone spécifique pour la Sorcière -->
+                <div id="witch-options" style="display: none; text-align: left;">
+                    <div class="witch-section" id="witch-revive-section">
+                        <p style="color: #28a745; font-weight: bold; margin-top: 0;">🧪 Potion de Vie</p>
+                        <p>Les loups ont attaqué : <span id="witch-victim-name" style="font-weight:bold; color:white;"></span></p>
+                        <label><input type="checkbox" id="witch-revive-check" class="custom-checkbox"> Sauver ce joueur</label>
+                    </div>
+                    <div class="witch-section" id="witch-kill-section">
+                        <p style="color: #e94560; font-weight: bold; margin-top: 0;">☠️ Potion de Mort</p>
+                        <p>Sélectionnez une victime (Optionnel) :</p>
+                    </div>
+                </div>
+
                 <div id="vote-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
                 <button id="btn-confirm-action" style="display: none;">✅ Confirmer</button>
                 <p id="my-vote-status" style="color: #e94560; font-weight: bold; margin-top: 10px;"></p>
@@ -120,7 +146,7 @@
             </div>
         </div>
 
-        <!-- ECRAN NARRATEUR (MODE HUMAIN SEULEMENT) -->
+        <!-- ECRAN NARRATEUR (MODE HUMAIN) -->
         <div id="narrator-screen" class="screen">
             <h2 id="narrator-title">👁️ Tableau de Bord</h2>
             <div style="display:flex; gap:10px; margin-bottom: 15px;">
@@ -143,6 +169,6 @@
             <button onclick="location.reload()" style="background:#111; margin-top:30px;">Quitter</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=60"></script>
+    <script type="module" src="script.js?v=70"></script>
 </body>
 </html>
