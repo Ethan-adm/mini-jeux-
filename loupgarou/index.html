@@ -34,6 +34,10 @@
         #dead-screen { background-color: #5a0000; color: white;}
         .vote-panel { background: #1a1a2e; padding: 15px; border-radius: 10px; border: 1px solid #ffbc00; margin-top: 20px; }
         .auto-narrator-msg { background: #fff; color: #000; padding: 15px; border-radius: 10px; font-weight: bold; margin-top: 20px; font-size: 1.1em; border: 3px solid #e94560;}
+        .target-btn { background: #2a3a5a; padding: 12px; margin: 0; width: 100%; border-radius: 8px; color: white; border: 2px solid transparent; cursor: pointer; transition: 0.2s; font-size: 15px;}
+        .target-btn:hover { background: #3a4a6a; }
+        #btn-confirm-action { background-color: #28a745; margin-top: 15px; font-size: 1.1em;}
+        #btn-confirm-action:hover { background-color: #34ce57; }
     </style>
 </head>
 <body>
@@ -61,8 +65,8 @@
                 <div class="settings-row">
                     <label>Mode :</label>
                     <select id="game-mode" class="custom-select">
-                        <option value="auto">🤖 Narrateur Automatique (L'Admin joue)</option>
-                        <option value="humain">🗣️ Narrateur Humain (L'Admin anime)</option>
+                        <option value="auto">🤖 Narrateur Automatique</option>
+                        <option value="humain">🗣️ Narrateur Humain</option>
                     </select>
                 </div>
                 <div class="settings-row">
@@ -91,10 +95,11 @@
 
             <div id="auto-narrator-display" class="auto-narrator-msg" style="display: none;"></div>
 
-            <!-- ZONE DE VOTE -->
+            <!-- ZONE DE VOTE (AVEC CONFIRMATION) -->
             <div id="vote-zone" class="vote-panel" style="display: none;">
                 <h3 id="vote-title" style="color: #ffbc00; margin-top: 0;">🗳️ Action</h3>
                 <div id="vote-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                <button id="btn-confirm-action" style="display: none;">✅ Confirmer</button>
                 <p id="my-vote-status" style="color: #e94560; font-weight: bold; margin-top: 10px;"></p>
             </div>
 
@@ -138,6 +143,6 @@
             <button onclick="location.reload()" style="background:#111; margin-top:30px;">Quitter</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=50"></script>
+    <script type="module" src="script.js?v=60"></script>
 </body>
 </html>
