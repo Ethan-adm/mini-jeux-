@@ -29,7 +29,7 @@
         .custom-select { padding: 10px; border-radius: 8px; background: #2a3a5a; color: white; border: none; font-size: 14px; outline: none; width: 55%;}
         .small-input { width: 60px !important; padding: 10px !important; border-radius: 8px; background: #2a3a5a; color: white; border: none; text-align: center; font-weight: bold; font-size: 16px;}
         .custom-checkbox { width: 20px; height: 20px; accent-color: #e94560;}
-        .role-card { background: #0f3460; border: 3px dashed #e94560; border-radius: 15px; padding: 40px 20px; margin-top: 20px; cursor: pointer; user-select: none; transition: 0.2s; display: flex; align-items: center; justify-content: center; min-height: 100px;}
+        .role-card { background: #0f3460; border: 3px dashed #e94560; border-radius: 15px; padding: 40px 20px; margin-top: 20px; cursor: pointer; user-select: none; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px;}
         .role-card:active { transform: scale(0.95); background: #16213e;}
         #dead-screen { background-color: #5a0000; color: white;}
         .vote-panel { background: #1a1a2e; padding: 15px; border-radius: 10px; border: 1px solid #ffbc00; margin-top: 20px; }
@@ -39,13 +39,14 @@
         #btn-confirm-action { background-color: #28a745; margin-top: 15px; font-size: 1.1em;}
         #btn-confirm-action:hover { background-color: #34ce57; }
         .witch-section { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #9b59b6;}
+        #endgame-screen { background-color: #ffd700; color: #16213e; }
     </style>
 </head>
 <body>
     <div id="app">
         <!-- ECRAN DE CONNEXION -->
         <div id="login-screen" class="screen active">
-            <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
+            <button class="back-btn" onclick="window.location.href='../index.html'" style="border-color: rgba(255,255,255,0.3);">⬅ Retour au Hub</button>
             <h1>🐺 Loup-Garou</h1>
             <p>Multijoueur en direct</p>
             <div class="input-zone">
@@ -81,7 +82,7 @@
                     <label>Rôles Spéciaux :</label>
                     <label class="role-label"><input type="checkbox" id="role-voyante" class="custom-checkbox" checked> 👁️ Voyante</label>
                     <label class="role-label"><input type="checkbox" id="role-sorciere" class="custom-checkbox" checked> 🧙‍♀️ Sorcière</label>
-                    <label class="role-label"><input type="checkbox" id="role-cupidon" class="custom-checkbox"> 🏹 Cupidon</label>
+                    <label class="role-label"><input type="checkbox" id="role-cupidon" class="custom-checkbox" checked> 🏹 Cupidon</label>
                     <label class="role-label"><input type="checkbox" id="role-chasseur" class="custom-checkbox" checked> 🔫 Chasseur</label>
                 </div>
 
@@ -90,6 +91,7 @@
                 <div class="theme-section">
                     <label>Règles :</label>
                     <label class="role-label"><input type="checkbox" id="reveal-roles-death" class="custom-checkbox" checked> 🪦 Révéler le rôle des morts</label>
+                    <label class="role-label"><input type="checkbox" id="rule-witch-attacked" class="custom-checkbox"> 🧪 Sorcière agit même si attaquée par les loups</label>
                 </div>
 
                 <button id="start-game-btn">Distribuer les rôles !</button>
@@ -103,6 +105,7 @@
             <div class="role-card" id="role-card">
                 <p id="role-instruction" style="color:#888;">Reste appuyé ici pour voir</p>
                 <h1 id="my-role-display" style="display:none; color: #e94560; font-size: 2em; margin: 0;">???</h1>
+                <p id="my-lover-display" style="display:none; color: #ff69b4; margin-top: 10px; font-weight: bold;"></p>
             </div>
 
             <div id="auto-narrator-display" class="auto-narrator-msg" style="display: none;"></div>
@@ -110,17 +113,18 @@
             <!-- ZONE DE VOTE (AVEC CONFIRMATION) -->
             <div id="vote-zone" class="vote-panel" style="display: none;">
                 <h3 id="vote-title" style="color: #ffbc00; margin-top: 0;">🗳️ Action</h3>
+                <p id="vote-subtitle" style="font-size: 0.9em; margin-bottom: 10px;"></p>
                 
                 <!-- Zone spécifique pour la Sorcière -->
                 <div id="witch-options" style="display: none; text-align: left;">
                     <div class="witch-section" id="witch-revive-section">
-                        <p style="color: #28a745; font-weight: bold; margin-top: 0;">🧪 Potion de Vie</p>
+                        <p style="color: #28a745; font-weight: bold; margin-top: 0;">🧪 Potion de Vie (1 seule fois)</p>
                         <p>Les loups ont attaqué : <span id="witch-victim-name" style="font-weight:bold; color:white;"></span></p>
                         <label><input type="checkbox" id="witch-revive-check" class="custom-checkbox"> Sauver ce joueur</label>
                     </div>
                     <div class="witch-section" id="witch-kill-section">
-                        <p style="color: #e94560; font-weight: bold; margin-top: 0;">☠️ Potion de Mort</p>
-                        <p>Sélectionnez une victime (Optionnel) :</p>
+                        <p style="color: #e94560; font-weight: bold; margin-top: 0;">☠️ Potion de Mort (1 seule fois)</p>
+                        <p style="font-size: 0.9em;">Sélectionnez une victime en dessous (Optionnel)</p>
                     </div>
                 </div>
 
@@ -133,7 +137,7 @@
             <div id="night-cover" style="display:none; position:absolute; top:-30px; left:-30px; right:-30px; bottom:-30px; background:rgba(0,0,0,0.98); z-index:100; flex-direction:column; justify-content:center; align-items:center;">
                 <h1 style="font-size: 4em; margin:0;">🌙</h1>
                 <h2>La nuit tombe...</h2>
-                <p style="color:#888;">Le village s'endort, fermez les yeux.</p>
+                <p style="color:#888;">Le village s'endort.</p>
             </div>
 
             <!-- BARRE DE CONTRÔLE ADMIN (MODE AUTO) -->
@@ -168,7 +172,15 @@
             <p>Observe la suite de la partie en silence.</p>
             <button onclick="location.reload()" style="background:#111; margin-top:30px;">Quitter</button>
         </div>
+
+        <!-- ECRAN DE FIN DE PARTIE -->
+        <div id="endgame-screen" class="screen">
+            <h1 style="font-size: 4em; margin-bottom: 0;">🏆</h1>
+            <h1 id="endgame-winner">Fin de partie !</h1>
+            <p id="endgame-details" style="font-weight: bold;"></p>
+            <button onclick="location.reload()" style="background:#16213e; color:white; margin-top:30px;">Refaire une partie</button>
+        </div>
     </div>
-    <script type="module" src="script.js?v=70"></script>
+    <script type="module" src="script.js?v=80"></script>
 </body>
 </html>
