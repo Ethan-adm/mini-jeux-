@@ -22,7 +22,7 @@ let gameMode = "humain";
 let currentVotesObj = {};
 let currentAutoState = {}; 
 
-let selectedTargetIds = []; // Array (Pour Cupidon qui choisit 2 personnes)
+let selectedTargetIds = []; 
 let currentPhaseName = "";
 
 // --- GESTION DE LA VOIX ---
@@ -70,17 +70,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         currentPlayers = snapshot.val() || {};
         if(document.getElementById('lobby-screen').classList.contains('active')) updateLobby(currentPlayers);
         if(document.getElementById('narrator-screen').classList.contains('active')) updateNarratorScreen(currentPlayers);
-
-        // GESTION SPECIALE CHASSEUR MORT (Il reste sur l'écran pour tirer)
-        if(currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead) {
-            if (currentAutoState.phase === "chasseur" && currentPlayers[myPlayerId].role === "🔫 Chasseur" && !currentAutoState.chasseurA_Tire) {
-                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                document.getElementById('game-screen').classList.add('active');
-            } else {
-                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                document.getElementById('dead-screen').classList.add('active');
-            }
-        }
+        checkScreenState(); // Vérifie où le joueur doit être (Mort ou Jeu)
     });
 
     // ECOUTE LANCEMENT JEU
@@ -122,6 +112,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         voteZone.style.display = "none";
         document.getElementById('my-vote-status').textContent = "";
         selectedTargetIds = []; 
+        checkScreenState(); // Re-vérifier l'écran à chaque phase (notamment pour le chasseur)
 
         // VICTOIRE ?
         if (currentPhaseName === "endgame") {
@@ -142,13 +133,12 @@ document.getElementById('join-btn').addEventListener('click', () => {
         }
 
         if (currentPhaseName === "nuit") {
-            nightCover.style.display = 'flex';
-            autoBox.style.display = 'none';
+            nightCover.style.display = 'flex'; autoBox.style.display = 'none';
             parler("La nuit tombe sur le village. Tout le monde s'endort.", currentPhaseName);
         } 
         else if (currentPhaseName === "cupidon") {
             parler("Cupidon se réveille, et désigne deux amoureux.", currentPhaseName);
-            if (currentPlayers[myPlayerId].role === "🏹 Cupidon" && !currentPlayers[myPlayerId].isDead) {
+            if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].role === "🏹 Cupidon" && !currentPlayers[myPlayerId].isDead) {
                 nightCover.style.display = 'none'; voteZone.style.display = "block";
                 document.getElementById('vote-title').textContent = "🏹 Formez le couple";
                 voteSubtitle.textContent = "Sélectionnez exactement 2 joueurs.";
@@ -157,7 +147,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         }
         else if (currentPhaseName === "voyante") {
             parler("La voyante se réveille, et choisit un joueur à inspecter.", currentPhaseName);
-            if (currentPlayers[myPlayerId].role === "👁️ Voyante" && !currentPlayers[myPlayerId].isDead) {
+            if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].role === "👁️ Voyante" && !currentPlayers[myPlayerId].isDead) {
                 nightCover.style.display = 'none'; voteZone.style.display = "block";
                 document.getElementById('vote-title').textContent = "👁️ Choisis qui inspecter";
                 voteSubtitle.textContent = "Son rôle secret s'affichera ici.";
@@ -166,21 +156,20 @@ document.getElementById('join-btn').addEventListener('click', () => {
         }
         else if (currentPhaseName === "loups") {
             parler("Les loups-garous se réveillent, et choisissent leur victime.", currentPhaseName);
-            if (currentPlayers[myPlayerId].role === "🐺 Loup-Garou" && !currentPlayers[myPlayerId].isDead) {
+            if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].role === "🐺 Loup-Garou" && !currentPlayers[myPlayerId].isDead) {
                 nightCover.style.display = 'none'; voteZone.style.display = "block";
                 document.getElementById('vote-title').textContent = "🐺 Cible de la Meute";
-                voteSubtitle.textContent = "Mettez-vous d'accord du regard ! Tous les loups doivent voter pour la même personne.";
+                voteSubtitle.textContent = "IMPORTANT : Tous les loups doivent voter pour la même personne, sinon l'attaque échoue !";
                 renderVoteButtons("loups");
             } else nightCover.style.display = 'flex';
         }
         else if (currentPhaseName === "sorciere") {
             parler("La sorcière se réveille. Elle a des potions...", currentPhaseName);
-            if (currentPlayers[myPlayerId].role === "🧙‍♀️ Sorcière" && !currentPlayers[myPlayerId].isDead) {
-                // REGLE : Sorcière attaquée ?
+            if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].role === "🧙‍♀️ Sorcière" && !currentPlayers[myPlayerId].isDead) {
                 if (currentAutoState.wolfVictim === myPlayerId && !currentAutoState.witchActsIfAttacked) {
                     nightCover.style.display = 'none'; autoBox.style.display = "block";
-                    autoBox.textContent = "🩸 Les loups t'ont mortellement blessée. Tu es trop faible pour utiliser tes potions.";
-                    set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), "skipped"); // Passe son tour
+                    autoBox.textContent = "🩸 Les loups t'ont attaquée ! Tu es trop faible pour utiliser tes potions.";
+                    set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), "skipped"); 
                 } else {
                     nightCover.style.display = 'none'; voteZone.style.display = "block";
                     document.getElementById('vote-title').textContent = "🧙‍♀️ Tes Potions";
@@ -199,7 +188,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         else if (currentPhaseName === "chasseur") {
             nightCover.style.display = 'none'; autoBox.style.display = "none";
             parler("Le chasseur est mort ! Il a un dernier tir pour emporter quelqu'un avec lui.", currentPhaseName);
-            if (currentPlayers[myPlayerId].role === "🔫 Chasseur") {
+            if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].role === "🔫 Chasseur") {
                 voteZone.style.display = "block";
                 document.getElementById('vote-title').textContent = "🔫 Ultimatum du Chasseur";
                 voteSubtitle.textContent = "Tu vas mourir. Tire sur quelqu'un avant de partir !";
@@ -214,7 +203,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         }
         else if (currentPhaseName === "vote_village") {
             nightCover.style.display = 'none'; autoBox.style.display = 'none';
-            if (!currentPlayers[myPlayerId].isDead) {
+            if (currentPlayers[myPlayerId] && !currentPlayers[myPlayerId].isDead) {
                 voteZone.style.display = "block";
                 document.getElementById('vote-title').textContent = "🗳️ Tribunal du Village";
                 voteSubtitle.textContent = "Débattez et votez pour éliminer un suspect.";
@@ -224,6 +213,22 @@ document.getElementById('join-btn').addEventListener('click', () => {
         }
     });
 });
+
+// GESTION CENTRALE DE L'ECRAN MORT/VIVANT
+function checkScreenState() {
+    if (!document.getElementById('game-screen').classList.contains('active') && !document.getElementById('dead-screen').classList.contains('active')) return; // Pas en jeu
+    
+    if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead) {
+        if (currentPlayers[myPlayerId].role === "🔫 Chasseur" && currentPhaseName === "chasseur" && !currentAutoState.chasseurA_Tire) {
+            // Le chasseur revient à la vie juste le temps de tirer
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('game-screen').classList.add('active');
+        } else {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('dead-screen').classList.add('active');
+        }
+    }
+}
 
 function annoncerMorts(deathsArray) {
     if (!deathsArray || deathsArray.length === 0 || deathsArray.includes("none")) return "Personne n'est mort.";
@@ -305,7 +310,6 @@ function showRoleScreen() {
 function showNarratorScreen() {
     document.getElementById('lobby-screen').classList.remove('active');
     document.getElementById('narrator-screen').classList.add('active');
-    // Code Narrateur Humain ignoré ici pour faire place
 }
 
 // ==========================================
@@ -324,25 +328,36 @@ function getHighestVotedId() {
 }
 
 function getWolfConsensus() {
+    let wolfCount = 0;
+    for(let id in currentPlayers) { if (currentPlayers[id].role === "🐺 Loup-Garou" && !currentPlayers[id].isDead) wolfCount++; }
+    
     let votes = Object.values(currentVotesObj);
-    if (votes.length === 0) return "none";
+    if (votes.length < wolfCount) return "not_enough";
     let first = votes[0];
     let consensus = votes.every(v => v === first);
-    return consensus ? first : "none"; // Si pas d'accord, personne ne meurt
+    return consensus ? first : "no_consensus";
 }
 
 function roleExists(roleName) { return Object.values(currentPlayers).some(p => p.role === roleName && !p.isDead); }
 
+// La cascade de la mort (Amoureux)
 function propagateDeaths(deathsArray) {
-    let finalDeaths = [...deathsArray];
+    let finalDeaths = new Set(deathsArray);
     let lovers = currentAutoState.lovers || [];
-    deathsArray.forEach(d => {
-        if(lovers.includes(d)) {
-            let other = lovers.find(l => l !== d);
-            if(other && !finalDeaths.includes(other)) finalDeaths.push(other);
+    let added = true;
+    while(added) {
+        added = false;
+        for (let d of finalDeaths) {
+            if (lovers.includes(d)) {
+                let other = lovers.find(l => l !== d);
+                if (other && !finalDeaths.has(other)) {
+                    finalDeaths.add(other);
+                    added = true;
+                }
+            }
         }
-    });
-    return finalDeaths;
+    }
+    return Array.from(finalDeaths);
 }
 
 function checkWinCondition() {
@@ -356,8 +371,8 @@ function checkWinCondition() {
     }
     if (totalAlive === 0) return "Égalité ! Tout le monde est mort.";
     if (loversAlive === totalAlive && totalAlive === 2) return "💘 Les Amoureux gagnent !";
-    if (wolves === 0) return "🧑‍🌾 Le Village gagne !";
-    if (wolves >= villagers) return "🐺 Les Loups-Garous gagnent !";
+    if (wolves === 0) return "🧑‍🌾 Le Village a vaincu les loups !";
+    if (wolves >= villagers) return "🐺 Les Loups-Garous contrôlent le village !";
     return null;
 }
 
@@ -382,6 +397,7 @@ document.getElementById('btn-next-phase').addEventListener('click', () => {
     let updates = {};
     let deadThisTurn = [];
 
+    // Verifier la victoire AVANT de changer de phase
     let winMsg = checkWinCondition();
     if (winMsg && phase !== "start" && phase !== "nuit" && phase !== "voyante" && phase !== "loups" && phase !== "sorciere" && phase !== "cupidon") {
         updates[`rooms/${currentRoom}/autoState/phase`] = "endgame";
@@ -403,6 +419,10 @@ document.getElementById('btn-next-phase').addEventListener('click', () => {
     }
     else if (phase === "loups") {
         let victim = getWolfConsensus();
+        if (victim === "not_enough" || victim === "no_consensus") {
+            if(!confirm("Les loups n'ont pas tous voté pour la même personne. Forcer le passage (Personne ne meurt) ?")) return;
+            victim = "none";
+        }
         updates[`rooms/${currentRoom}/autoState/wolfVictim`] = victim;
         nextPhase = getNextNightPhase("loups");
     }
@@ -531,7 +551,7 @@ function renderVoteButtons(type) {
         return;
     }
 
-    // === AUTRES (Village, Chasseur, Cupidon, Loups) ===
+    // === AUTRES ===
     let maxSelections = type === "cupidon" ? 2 : 1;
 
     if (type === "village") {
@@ -598,9 +618,7 @@ function selectTarget(id, btnElement, maxSelections) {
     
     if (selectedTargetIds.length === maxSelections || selectedTargetIds.includes("skip")) {
         document.getElementById('btn-confirm-action').style.display = "block";
-    } else {
-        document.getElementById('btn-confirm-action').style.display = "none";
-    }
+    } else document.getElementById('btn-confirm-action').style.display = "none";
 }
 
 const roleCard = document.getElementById('role-card'), roleDisplay = document.getElementById('my-role-display'), roleInst = document.getElementById('role-instruction');
