@@ -28,8 +28,6 @@ let autoState = {};
 let gameState = {};    
 let selectedTargetIds = []; 
 
-// VOIX (Mode Auto)
-let lastSpokenPhase = "";
 function parler(texte, phase) {
     if (gameMode !== "auto") return; 
     if (lastSpokenPhase === phase) return; 
@@ -49,6 +47,9 @@ document.getElementById('join-btn').addEventListener('click', () => {
 
     if (!rawName || !room) return alert("Saisis un pseudo et un code !");
 
+    document.getElementById('join-btn').style.display = "none";
+    document.getElementById('connecting-msg').style.display = "block";
+
     currentRoom = room;
     let displayName = rawName;
     let wantsToAdmin = false;
@@ -67,29 +68,13 @@ document.getElementById('join-btn').addEventListener('click', () => {
         set(ref(db, `rooms/${room}/status`), "lobby");
     }
 
-    // NOUVEAU SYSTEME DE RAFRAICHISSEMENT CENTRALISÉ (Fini les écrans blancs !)
-    onValue(ref(db, `rooms/${room}/status`), snap => {
-        let val = snap.val();
-        if (val === "lobby" || !val) {
-            isGameActive = false;
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('lobby-screen').classList.add('active');
-            document.getElementById('vote-zone').style.display = "none";
-            document.getElementById('night-cover').style.display = "none";
-            document.getElementById('admin-auto-bar').style.display = "none";
-            if(document.getElementById('lobby-screen').classList.contains('active')) updateLobby();
-        } else {
-            isGameActive = true;
-            checkAndRender();
-        }
-    });
+    // CHANGEMENT ECRAN IMMEDIAT
+    document.getElementById('login-screen').classList.remove('active');
+    document.getElementById('lobby-screen').classList.add('active');
+    document.getElementById('display-room-code').textContent = room; // Affichage garanti du code !
 
-    onValue(ref(db, `rooms/${room}/mode`), snap => { gameMode = snap.val() || "auto"; checkAndRender(); });
-    onValue(ref(db, `rooms/${room}/narratorId`), snap => { amINarrator = (snap.val() === myPlayerId); checkAndRender(); });
-    onValue(ref(db, `rooms/${room}/autoState`), snap => { autoState = snap.val() || {}; checkAndRender(); });
-    onValue(ref(db, `rooms/${room}/gameState`), snap => { gameState = snap.val() || {}; checkAndRender(); });
-    
-    onValue(ref(db, `rooms/${room}/adminId`), snap => {
+    // ECOUTES DE BASE
+    onValue(ref(db, `rooms/${room}/adminId`), (snap) => {
         adminIdGlobal = snap.val();
         amIAdmin = (adminIdGlobal === myPlayerId);
         document.getElementById('admin-panel').style.display = amIAdmin ? "block" : "none";
@@ -97,16 +82,21 @@ document.getElementById('join-btn').addEventListener('click', () => {
         updateLobby();
     });
 
-    onValue(ref(db, `rooms/${room}/players`), snap => {
+    onValue(ref(db, `rooms/${room}/narratorId`), (snap) => {
+        amINarrator = (snap.val() === myPlayerId);
+    });
+
+    onValue(ref(db, `rooms/${room}/players`), (snap) => {
         currentPlayers = snap.val() || {};
         if (!currentPlayers[myPlayerId] && document.getElementById('lobby-screen').classList.contains('active')) {
             alert("Vous avez été expulsé."); location.reload();
         }
         if(document.getElementById('lobby-screen').classList.contains('active')) updateLobby();
-        checkAndRender();
+        if(amINarrator && document.getElementById('narrator-screen').classList.contains('active')) renderNarratorPlayerList();
+        checkScreenState();
     });
 
-    onValue(ref(db, `rooms/${room}/votes`), snap => {
+    onValue(ref(db, `rooms/${room}/votes`), (snap) => {
         currentVotes = snap.val() || {};
         if (gameMode === "auto") {
             document.getElementById('vote-progress').textContent = `${Object.keys(currentVotes).length} action(s)`;
@@ -114,9 +104,57 @@ document.getElementById('join-btn').addEventListener('click', () => {
             renderNarratorUI();
         }
     });
+
+    onValue(ref(db, `rooms/${room}/status`), (snap) => {
+        let val = snap.val();
+        if (val === "lobby" || !val) {
+            isGameActive = false;
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('lobby-screen').classList.add('active');
+            document.getElementById('display-room-code').textContent = currentRoom; // Sécurité
+            document.getElementById('vote-zone').style.display = "none";
+            document.getElementById('night-cover').style.display = "none";
+            document.getElementById('admin-auto-bar').style.display = "none";
+        } else if (val === "role_reveal" || val === "started") {
+            isGameActive = true;
+            onValue(ref(db, `rooms/${room}/mode`), (modeSnap) => {
+                gameMode = modeSnap.val();
+                if (gameMode === "humain") {
+                    onValue(ref(db, `rooms/${room}/narratorId`), (nSnap) => {
+                        amINarrator = (nSnap.val() === myPlayerId);
+                        if (amINarrator) {
+                            showNarratorScreen();
+                            if (gameState.phase) renderNarratorUI();
+                        } else {
+                            showRoleScreen();
+                            if (gameState.phase) renderPlayerUIHumain();
+                        }
+                    }, {onlyOnce: true});
+                } else {
+                    showRoleScreen();
+                    if (amIAdmin) document.getElementById('admin-auto-bar').style.display = "flex";
+                    if (autoState.phase) handleAutoPhase();
+                }
+            }, {onlyOnce: true});
+        }
+    });
+
+    onValue(ref(db, `rooms/${room}/autoState`), (snap) => {
+        if(gameMode !== "auto" || !isGameActive) return;
+        autoState = snap.val() || {};
+        if (autoState.phase) handleAutoPhase();
+    });
+
+    onValue(ref(db, `rooms/${room}/gameState`), (snap) => {
+        if(gameMode !== "humain" || !isGameActive) return;
+        gameState = snap.val() || {};
+        if (!gameState.phase) return;
+        checkScreenState();
+        if (amINarrator) renderNarratorUI();
+        else renderPlayerUIHumain();
+    });
 });
 
-// AFFICHER LE SELECTEUR NARRATEUR
 document.getElementById('game-mode').addEventListener('change', (e) => {
     document.getElementById('narrator-select-row').style.display = e.target.value === "humain" ? "flex" : "none";
 });
@@ -179,10 +217,11 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
     updates[`rooms/${currentRoom}/mode`] = mode;
     updates[`rooms/${currentRoom}/votes`] = null;
 
+    // SECURITE : Pas de [] vide pour Firebase. Toujours mettre ["none"].
     let defaultState = {
-        cupidonDone: false, lovers: [], wolfVictim: "none",
+        cupidonDone: false, lovers: ["none"], wolfVictim: "none",
         witchLifeUsed: false, witchDeathUsed: false, chasseurA_Tire: false,
-        lastDeaths: [], nextPhaseAfterChasseur: "vote_village", // Tableau vide par defaut pour éviter les bugs
+        lastDeaths: ["none"], nextPhaseAfterChasseur: "vote_village", 
         revealRoles: document.getElementById('reveal-roles-death').checked,
         hasMaire: document.getElementById('rule-maire').checked,
         maireId: "none", dayCount: 1
@@ -199,7 +238,7 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
         };
     }
     
-    updates[`rooms/${currentRoom}/status`] = "started"; // Le statut active le jeu
+    updates[`rooms/${currentRoom}/status`] = "started"; 
     update(ref(db), updates);
 });
 
@@ -212,63 +251,22 @@ document.getElementById('btn-restart').addEventListener('click', () => {
     } else location.reload();
 });
 
-
-// ==========================================
-// MOTEUR D'AFFICHAGE CENTRALISÉ
-// ==========================================
-function checkAndRender() {
-    if (!isGameActive) return;
-
-    let targetScreen = "game-screen";
-    let isChasseurTurn = false;
-    let isEndgame = false;
-
-    if (gameMode === "auto" && autoState.phase) {
-        if (autoState.phase === "chasseur" && !autoState.chasseurA_Tire) isChasseurTurn = true;
-        if (autoState.phase === "endgame") isEndgame = true;
-    } else if (gameMode === "humain" && gameState.phase) {
-        if (gameState.phase === "chasseur" && !gameState.chasseurA_Tire) isChasseurTurn = true;
-        if (gameState.phase === "endgame") isEndgame = true;
-    }
-
-    // Priorité des écrans
-    if (isEndgame) {
-        targetScreen = "endgame-screen";
-    } else if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead && !(currentPlayers[myPlayerId].role === "🔫 Chasseur" && isChasseurTurn)) {
-        targetScreen = "dead-screen";
-    } else if (gameMode === "humain" && amINarrator) {
-        targetScreen = "narrator-screen";
-    }
-
-    // Afficher uniquement l'écran ciblé
-    document.querySelectorAll('.screen').forEach(s => {
-        if (s.id !== targetScreen) s.classList.remove('active');
-    });
-    document.getElementById(targetScreen).classList.add('active');
-
-    // Rendu spécifique
-    if (targetScreen === "endgame-screen") {
-        document.getElementById('night-cover').style.display = 'none';
-        document.getElementById('endgame-winner').textContent = gameMode === "auto" ? autoState.winnerMsg : gameState.winnerMsg;
-    } else if (targetScreen === "narrator-screen") {
-        renderNarratorUI();
-    } else if (targetScreen === "game-screen") {
-        document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId]?.role || "???";
-        if (gameMode === "auto") {
-            if (amIAdmin) document.getElementById('admin-auto-bar').style.display = "flex";
-            handleAutoPhase();
-        } else {
-            document.getElementById('admin-auto-bar').style.display = "none";
-            renderPlayerUIHumain();
-        }
-    }
+function showRoleScreen() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('game-screen').classList.add('active');
+    if(currentPlayers[myPlayerId]) document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId].role;
 }
 
+function showNarratorScreen() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('narrator-screen').classList.add('active');
+}
 
 // ==========================================
 // MOTEUR 1 : NARRATEUR AUTO (EN LIGNE)
 // ==========================================
 function handleAutoPhase() {
+    if (!isGameActive) return;
     let pName = autoState.phase;
     const nightCover = document.getElementById('night-cover');
     const dayAnnounce = document.getElementById('day-announcement');
@@ -278,6 +276,15 @@ function handleAutoPhase() {
     voteZone.style.display = "none";
     document.getElementById('my-vote-status').textContent = "";
     selectedTargetIds = []; 
+    checkScreenState(); 
+
+    if (pName === "endgame") {
+        nightCover.style.display = 'none';
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('endgame-screen').classList.add('active');
+        document.getElementById('endgame-winner').textContent = autoState.winnerMsg;
+        return;
+    }
 
     if (autoState.lovers && autoState.lovers.includes(myPlayerId)) {
         let otherLoverId = autoState.lovers.find(id => id !== myPlayerId);
@@ -392,13 +399,22 @@ function advanceAutoPhase() {
     let updates = {};
     let deadThisTurn = [];
 
+    let winMsg = checkWinCondition(autoState.lovers, autoState.lastDeaths || []);
+    if (winMsg && !["start", "nuit", "voyante", "loups", "sorciere", "cupidon"].includes(phase)) {
+        updates[`rooms/${currentRoom}/autoState/phase`] = "endgame";
+        updates[`rooms/${currentRoom}/autoState/winnerMsg`] = winMsg;
+        update(ref(db), updates); return;
+    }
+
     if (phase === "start" || phase === "resultat_village" || phase === "resultat_chasseur" && autoState.nextPhaseAfterChasseur === "nuit") {
-        nextPhase = "nuit"; updates[`rooms/${currentRoom}/autoState/dayCount`] = (autoState.dayCount || 1) + 1;
+        nextPhase = "nuit"; 
+        updates[`rooms/${currentRoom}/autoState/dayCount`] = (autoState.dayCount || 1) + 1;
+        updates[`rooms/${currentRoom}/autoState/lastDeaths`] = ["none"]; 
     }
     else if (phase === "nuit" || phase === "cupidon" || phase === "voyante") {
         if (phase === "cupidon") {
             let loverIds = Object.values(currentVotes)[0] || [];
-            updates[`rooms/${currentRoom}/autoState/lovers`] = loverIds;
+            updates[`rooms/${currentRoom}/autoState/lovers`] = loverIds.length > 0 ? loverIds : ["none"];
             updates[`rooms/${currentRoom}/autoState/cupidonDone`] = true;
         }
         nextPhase = getNextNightPhase(phase, autoState);
@@ -426,7 +442,7 @@ function advanceAutoPhase() {
     }
     else if (phase === "jour") {
         let lastD = autoState.lastDeaths || [];
-        if (lastD.some(id => currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur")) {
+        if (lastD.some(id => id !== "none" && currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur")) {
             nextPhase = "chasseur"; updates[`rooms/${currentRoom}/autoState/nextPhaseAfterChasseur`] = (autoState.dayCount === 1 && autoState.hasMaire && autoState.maireId === "none") ? "election_maire" : "vote_village";
         } else {
             nextPhase = (autoState.dayCount === 1 && autoState.hasMaire && autoState.maireId === "none") ? "election_maire" : "vote_village";
@@ -440,46 +456,41 @@ function advanceAutoPhase() {
     else if (phase === "vote_village") {
         let victim = getHighestVotedId(autoState);
         if (victim && victim !== "skip") applyDeathsAndMayor([victim], autoState, updates, "autoState");
-        else updates[`rooms/${currentRoom}/autoState/lastDeaths`] = []; // Empty list
+        else updates[`rooms/${currentRoom}/autoState/lastDeaths`] = ["none"];
         nextPhase = "resultat_village";
     }
     else if (phase === "resultat_village") {
         let lastD = autoState.lastDeaths || [];
-        if (lastD.some(id => currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur" && !autoState.chasseurA_Tire)) {
+        if (lastD.some(id => id !== "none" && currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur" && !autoState.chasseurA_Tire)) {
             nextPhase = "chasseur"; updates[`rooms/${currentRoom}/autoState/nextPhaseAfterChasseur`] = "nuit";
-        } else { nextPhase = "nuit"; updates[`rooms/${currentRoom}/autoState/dayCount`] = (autoState.dayCount || 1) + 1; }
+        } else { nextPhase = "nuit"; updates[`rooms/${currentRoom}/autoState/dayCount`] = (autoState.dayCount || 1) + 1; updates[`rooms/${currentRoom}/autoState/lastDeaths`] = ["none"];}
     }
     else if (phase === "chasseur") {
         updates[`rooms/${currentRoom}/autoState/chasseurA_Tire`] = true;
         let victim = getHighestVotedId(autoState);
         if (victim && victim !== "skip") applyDeathsAndMayor([victim], autoState, updates, "autoState");
-        else updates[`rooms/${currentRoom}/autoState/lastDeaths`] = [];
+        else updates[`rooms/${currentRoom}/autoState/lastDeaths`] = ["none"];
         nextPhase = "resultat_chasseur";
     }
     else if (phase === "resultat_chasseur") nextPhase = autoState.nextPhaseAfterChasseur;
 
-    // Check Victory 
-    let winMsg = checkWinCondition(autoState.lovers, updates[`rooms/${currentRoom}/autoState/lastDeaths`] || []);
-    if (winMsg && !["start", "nuit", "voyante", "loups", "sorciere", "cupidon"].includes(phase)) {
-        updates[`rooms/${currentRoom}/autoState/phase`] = "endgame";
-        updates[`rooms/${currentRoom}/autoState/winnerMsg`] = winMsg;
-    } else {
-        updates[`rooms/${currentRoom}/autoState/phase`] = nextPhase;
-    }
-
+    updates[`rooms/${currentRoom}/autoState/phase`] = nextPhase;
     updates[`rooms/${currentRoom}/votes`] = null; 
-    update(ref(db), updates);
+    update(ref(db), updates).catch(err => alert("Erreur serveur: " + err));
 }
 
 // ==========================================
 // MOTEUR 2 : NARRATEUR HUMAIN (PRESENTIEL)
 // ==========================================
 function renderPlayerUIHumain() {
+    if (!document.getElementById('game-screen').classList.contains('active') || !isGameActive) return;
+
     const nightCover = document.getElementById('night-cover');
     const dayAnnounce = document.getElementById('day-announcement');
     const voteZone = document.getElementById('vote-zone');
     
     voteZone.style.display = "none"; dayAnnounce.style.display = "none";
+    document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId].role;
 
     if (gameState.lovers && gameState.lovers.includes(myPlayerId)) {
         let other = gameState.lovers.find(id => id !== myPlayerId);
@@ -512,6 +523,8 @@ function renderPlayerUIHumain() {
 }
 
 function renderNarratorUI() {
+    if (!isGameActive) return;
+
     renderNarratorPlayerList();
     const scriptBox = document.getElementById('narrator-script');
     const actionBox = document.getElementById('narrator-action-area');
@@ -520,6 +533,13 @@ function renderNarratorUI() {
     
     actionBox.innerHTML = ""; revoteBtn.style.display = "none";
     nextBtn.textContent = "Suivant ➡️"; nextBtn.onclick = handleNarratorNext;
+
+    if (gameState.phase === "endgame") {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('endgame-screen').classList.add('active');
+        document.getElementById('endgame-winner').textContent = gameState.winnerMsg;
+        return;
+    }
 
     switch(gameState.phase) {
         case "nuit_debut":
@@ -590,7 +610,7 @@ function handleNarratorNext() {
 
     if (p === "nuit_debut") {
         newLog = ""; 
-        updates[`rooms/${currentRoom}/gameState/lastDeaths`] = [];
+        updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"]; // FIX 
         next = getNextNightPhase(p, gameState);
     }
     else if (p === "cupidon") {
@@ -639,7 +659,7 @@ function handleNarratorNext() {
     }
     else if (p === "jour") {
         let lastD = gameState.lastDeaths || [];
-        if (lastD.some(id => currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur")) {
+        if (lastD.some(id => id !== "none" && currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur")) {
             next = "chasseur"; 
             updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = (gameState.dayCount === 1 && gameState.hasMaire && gameState.maireId === "none") ? "election_maire" : "vote_village";
         } else {
@@ -660,18 +680,19 @@ function handleNarratorNext() {
             applyDeathsAndMayor([highest], gameState, updates, "gameState"); 
             newLog += `\n⚖️ Village a tué ${currentPlayers[highest].name}.`; 
         } else {
-            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = [];
+            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"]; // FIX
         }
         next = "resultat_village";
     }
     else if (p === "resultat_village") {
         let lastD = gameState.lastDeaths || [];
-        if (lastD.some(id => currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur" && !gameState.chasseurA_Tire)) {
+        if (lastD.some(id => id !== "none" && currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur" && !gameState.chasseurA_Tire)) {
             next = "chasseur"; 
             updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = "nuit_debut";
         } else { 
             next = "nuit_debut"; 
             updates[`rooms/${currentRoom}/gameState/dayCount`] = (gameState.dayCount || 1) + 1; 
+            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"]; // FIX
         }
     }
     else if (p === "chasseur") {
@@ -681,7 +702,7 @@ function handleNarratorNext() {
             applyDeathsAndMayor([highest], gameState, updates, "gameState"); 
             newLog += `\n🔫 Chasseur a tué ${currentPlayers[highest].name}.`; 
         } else {
-            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = [];
+            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"]; // FIX
         }
         next = "resultat_chasseur";
     }
@@ -701,7 +722,7 @@ function handleNarratorNext() {
     updates[`rooms/${currentRoom}/gameState/nightLog`] = newLog;
     updates[`rooms/${currentRoom}/votes`] = null; 
     
-    update(ref(db), updates);
+    update(ref(db), updates).catch(err => alert("Erreur serveur: " + err));
 }
 
 function renderNarratorPlayerList() {
@@ -773,13 +794,13 @@ function applyDeathsAndMayor(deathsArray, stateObj, updates, stateKey) {
         updates[`rooms/${currentRoom}/${stateKey}/maireId`] = aliveIds.length > 0 ? aliveIds[Math.floor(Math.random() * aliveIds.length)] : "none";
     }
     
-    updates[`rooms/${currentRoom}/${stateKey}/lastDeaths`] = actualDeaths;
+    updates[`rooms/${currentRoom}/${stateKey}/lastDeaths`] = actualDeaths.length > 0 ? actualDeaths : ["none"];
     return actualDeaths;
 }
 
 function checkWinCondition(lovers, pendingDeaths = []) {
     let tempPlayers = JSON.parse(JSON.stringify(currentPlayers));
-    pendingDeaths.forEach(id => { if(tempPlayers[id]) tempPlayers[id].isDead = true; });
+    pendingDeaths.forEach(id => { if(id !== "none" && tempPlayers[id]) tempPlayers[id].isDead = true; });
 
     let wolves = 0, villagers = 0, loversAlive = 0, totalAlive = 0;
     for(let id in tempPlayers) {
