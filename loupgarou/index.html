@@ -38,7 +38,6 @@
         #btn-confirm-action:hover { background-color: #34ce57; }
         .witch-section { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #9b59b6;}
         
-        /* Styles Narrateur Humain */
         .narrator-guide-box { background: #ffbc00; color: #000; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: left;}
         .narrator-script { font-style: italic; font-size: 1.1em; font-weight: bold; margin-bottom: 15px; border-left: 4px solid #e94560; padding-left: 10px;}
         .narrator-action-area { background: #16213e; padding: 15px; border-radius: 8px; color: white; margin-bottom: 15px;}
@@ -130,7 +129,6 @@
                 <h3 id="vote-title" style="color: #ffbc00; margin-top: 0;">🗳️ Vote</h3>
                 <p id="vote-subtitle" style="font-size: 0.9em; margin-bottom: 10px;"></p>
                 
-                <!-- Zone spécifique pour la Sorcière (Mode Auto) -->
                 <div id="witch-options" style="display: none; text-align: left;">
                     <div class="witch-section" id="witch-revive-section">
                         <p style="color: #28a745; font-weight: bold; margin-top: 0;">🧪 Potion de Vie</p>
@@ -168,22 +166,18 @@
         <!-- ECRAN NARRATEUR (MODE HUMAIN) -->
         <div id="narrator-screen" class="screen">
             <h2 style="margin-bottom: 5px;">👁️ Maître du Jeu</h2>
-            
             <div id="narrator-history" class="narrator-history">
                 <strong style="color:#ffbc00;">Journal de la Nuit :</strong><br>
                 <span id="history-text" style="color:#aaa;">Rien à signaler.</span>
             </div>
-
             <div class="narrator-guide-box">
                 <div id="narrator-script" class="narrator-script">"La nuit tombe..."</div>
                 <div id="narrator-action-area" class="narrator-action-area"></div>
-                
                 <div style="display: flex; gap: 10px;">
                     <button id="btn-narrator-revote" style="display: none; background: #333; color: white;">🔄 Refaire voter</button>
                     <button id="btn-narrator-next" style="background: #e94560; color: white; border: 2px solid white;">Suivant ➡️</button>
                 </div>
             </div>
-
             <div class="settings-box-container" style="margin-top: 0; padding: 15px;">
                 <h3 style="margin-top:0; font-size:16px;">État des Joueurs</h3>
                 <ul id="narrator-player-list" style="margin:0; font-size:14px;"></ul>
@@ -202,9 +196,9 @@
         <div id="endgame-screen" class="screen">
             <h1 style="font-size: 4em; margin-bottom: 0;">🏆</h1>
             <h1 id="endgame-winner">Fin de partie !</h1>
-            <button onclick="location.reload()" style="background:#16213e; color:white; margin-top:30px;">Retourner au Menu</button>
+            <button id="btn-restart" style="background:#16213e; color:white; margin-top:30px;">Refaire une partie dans ce salon</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=130"></script>
+    <script type="module" src="script.js?v=140"></script>
 </body>
 </html>
