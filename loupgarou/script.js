@@ -23,16 +23,18 @@ let gameMode = "auto";
 let currentVotes = {};
 let adminIdGlobal = "";
 
-// Variables d'état (Séparées pour éviter les conflits)
-let autoState = {};    // Pour le mode Auto (En ligne)
-let gameState = {};    // Pour le mode Humain (Présentiel)
+// SECURITÉ : Empêche l'écran de fin de s'afficher dès la connexion
+let isGameActive = false; 
 
+// Variables d'état
+let autoState = {};    // Pour le mode Auto
+let gameState = {};    // Pour le mode Humain
 let selectedTargetIds = []; 
 
 // VOIX (Mode Auto uniquement)
 let lastSpokenPhase = "";
 function parler(texte, phase) {
-    if (gameMode !== "auto") return; // On ne parle pas si un humain narre
+    if (gameMode !== "auto") return; 
     if (lastSpokenPhase === phase) return; 
     lastSpokenPhase = phase;
     if ('speechSynthesis' in window) {
@@ -54,7 +56,6 @@ document.getElementById('join-btn').addEventListener('click', () => {
     let displayName = rawName;
     let wantsToAdmin = false;
 
-    // Pseudonyme Admin caché
     if (rawName.toLowerCase().includes("admin")) {
         wantsToAdmin = true;
         displayName = rawName.replace(/admin/gi, "").trim() || "Chef";
@@ -69,11 +70,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         set(ref(db, `rooms/${room}/status`), "lobby");
     }
 
-    document.getElementById('login-screen').classList.remove('active');
-    document.getElementById('lobby-screen').classList.add('active');
-    document.getElementById('display-room-code').textContent = room;
-
-    // ECOUTES
+    // ECOUTES DE BASE
     onValue(ref(db, `rooms/${room}/adminId`), (snap) => {
         adminIdGlobal = snap.val();
         amIAdmin = (adminIdGlobal === myPlayerId);
@@ -105,24 +102,32 @@ document.getElementById('join-btn').addEventListener('click', () => {
         }
     });
 
+    // ECOUTE DU STATUT (LE VERROU DE SÉCURITÉ)
     onValue(ref(db, `rooms/${room}/status`), (snap) => {
-        if (snap.val() === "role_reveal") {
+        let val = snap.val();
+        if (val === "lobby" || !val) {
+            isGameActive = false;
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('lobby-screen').classList.add('active');
+            document.getElementById('vote-zone').style.display = "none";
+            document.getElementById('night-cover').style.display = "none";
+        } else if (val === "role_reveal" || val === "started") {
+            isGameActive = true;
             onValue(ref(db, `rooms/${room}/mode`), (modeSnap) => {
                 gameMode = modeSnap.val();
             }, {onlyOnce: true});
         }
     });
 
-    // ECOUTE MOTEUR AUTO
+    // ECOUTE MOTEURS DE JEU
     onValue(ref(db, `rooms/${room}/autoState`), (snap) => {
-        if(gameMode !== "auto") return;
+        if(gameMode !== "auto" || !isGameActive) return;
         autoState = snap.val() || {};
         if (autoState.phase) handleAutoPhase();
     });
 
-    // ECOUTE MOTEUR HUMAIN
     onValue(ref(db, `rooms/${room}/gameState`), (snap) => {
-        if(gameMode !== "humain") return;
+        if(gameMode !== "humain" || !isGameActive) return;
         gameState = snap.val() || {};
         if (!gameState.phase) return;
 
@@ -221,10 +226,22 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
     update(ref(db), updates);
 });
 
+// BOUTON REFAIRE UNE PARTIE (RESET DU SALON)
+document.getElementById('btn-restart').addEventListener('click', () => {
+    if (amIAdmin) {
+        update(ref(db, `rooms/${currentRoom}`), {
+            status: "lobby", autoState: null, gameState: null, votes: null
+        });
+    }
+    location.reload();
+});
+
 // ==========================================
 // MOTEUR 1 : NARRATEUR AUTO (EN LIGNE)
 // ==========================================
 function handleAutoPhase() {
+    if (!isGameActive) return;
+
     let pName = autoState.phase;
     const nightCover = document.getElementById('night-cover');
     const dayAnnounce = document.getElementById('day-announcement');
@@ -442,6 +459,8 @@ function advanceAutoPhase() {
 // ==========================================
 function renderPlayerUIHumain() {
     if (!document.getElementById('game-screen').classList.contains('active')) return;
+    if (!isGameActive) return;
+
     const nightCover = document.getElementById('night-cover');
     const dayAnnounce = document.getElementById('day-announcement');
     const voteZone = document.getElementById('vote-zone');
@@ -466,10 +485,10 @@ function renderPlayerUIHumain() {
     }
 
     if ((gameState.phase === "vote_village" || gameState.phase === "chasseur") && !currentPlayers[myPlayerId].isDead) {
-        if (gameState.phase === "chasseur" && currentPlayers[myPlayerId].role !== "🔫 Chasseur") return; // Only hunter votes
+        if (gameState.phase === "chasseur" && currentPlayers[myPlayerId].role !== "🔫 Chasseur") return; 
         voteZone.style.display = "block";
         document.getElementById('vote-title').textContent = gameState.phase === "chasseur" ? "🔫 Ultimatum" : "🗳️ Vote du Village";
-        renderPlayerVoteButtonsAuto(gameState.phase === "chasseur" ? "chasseur" : "village"); // Reusing the same UI logic
+        renderPlayerVoteButtonsAuto(gameState.phase === "chasseur" ? "chasseur" : "village"); 
     }
 }
 
@@ -484,6 +503,8 @@ function buildDeathMessageHumain(deaths) {
 }
 
 function renderNarratorUI() {
+    if (!isGameActive) return;
+
     renderNarratorPlayerList();
     const scriptBox = document.getElementById('narrator-script');
     const actionBox = document.getElementById('narrator-action-area');
@@ -747,7 +768,9 @@ function annoncerMortsAuto(deathsArray) {
 }
 
 function checkScreenState() {
+    if (!isGameActive) return;
     if (!document.getElementById('game-screen').classList.contains('active') && !document.getElementById('dead-screen').classList.contains('active')) return; 
+    
     if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead) {
         let isChasseurTurn = (gameMode === "auto" && currentPhaseName === "chasseur" && !autoState.chasseurA_Tire) || 
                              (gameMode === "humain" && gameState.phase === "chasseur");
