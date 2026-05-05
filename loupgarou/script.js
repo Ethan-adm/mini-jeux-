@@ -23,15 +23,15 @@ let gameMode = "auto";
 let currentVotes = {};
 let adminIdGlobal = "";
 
-// SECURITÉ : Empêche l'écran de fin de s'afficher dès la connexion
+// SECURITÉ : Empêche le chargement de l'ancienne partie
 let isGameActive = false; 
 
 // Variables d'état
-let autoState = {};    // Pour le mode Auto
-let gameState = {};    // Pour le mode Humain
+let autoState = {};    
+let gameState = {};    
 let selectedTargetIds = []; 
 
-// VOIX (Mode Auto uniquement)
+// VOIX (Mode Auto)
 let lastSpokenPhase = "";
 function parler(texte, phase) {
     if (gameMode !== "auto") return; 
@@ -102,7 +102,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         }
     });
 
-    // ECOUTE DU STATUT (LE VERROU DE SÉCURITÉ)
+    // LE VERROU DE SÉCURITÉ REPARÉ (Force les changements d'écran)
     onValue(ref(db, `rooms/${room}/status`), (snap) => {
         let val = snap.val();
         if (val === "lobby" || !val) {
@@ -111,10 +111,29 @@ document.getElementById('join-btn').addEventListener('click', () => {
             document.getElementById('lobby-screen').classList.add('active');
             document.getElementById('vote-zone').style.display = "none";
             document.getElementById('night-cover').style.display = "none";
+            document.getElementById('admin-auto-bar').style.display = "none";
         } else if (val === "role_reveal" || val === "started") {
             isGameActive = true;
             onValue(ref(db, `rooms/${room}/mode`), (modeSnap) => {
                 gameMode = modeSnap.val();
+                
+                // Forcer l'affichage du bon écran immédiatement
+                if (gameMode === "humain") {
+                    onValue(ref(db, `rooms/${room}/narratorId`), (nSnap) => {
+                        amINarrator = (nSnap.val() === myPlayerId);
+                        if (amINarrator) {
+                            showNarratorScreen();
+                            if (gameState.phase) renderNarratorUI();
+                        } else {
+                            showRoleScreen();
+                            if (gameState.phase) renderPlayerUIHumain();
+                        }
+                    }, {onlyOnce: true});
+                } else {
+                    showRoleScreen();
+                    if (amIAdmin) document.getElementById('admin-auto-bar').style.display = "flex";
+                    if (autoState.phase) handleAutoPhase();
+                }
             }, {onlyOnce: true});
         }
     });
@@ -130,13 +149,7 @@ document.getElementById('join-btn').addEventListener('click', () => {
         if(gameMode !== "humain" || !isGameActive) return;
         gameState = snap.val() || {};
         if (!gameState.phase) return;
-
-        if (gameState.phase !== "lobby" && document.getElementById('lobby-screen').classList.contains('active')) {
-            document.getElementById('lobby-screen').classList.remove('active');
-            if (amINarrator) document.getElementById('narrator-screen').classList.add('active');
-            else document.getElementById('game-screen').classList.add('active');
-        }
-
+        
         checkScreenState();
         if (amINarrator) renderNarratorUI();
         else renderPlayerUIHumain();
@@ -216,7 +229,7 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
         };
     } else {
         updates[`rooms/${currentRoom}/autoState`] = {
-            phase: "start", cupidonDone: false, lovers: [], wolfVictim: "none",
+            phase: "nuit", cupidonDone: false, lovers: [], wolfVictim: "none",
             witchLifeUsed: false, witchDeathUsed: false, chasseurA_Tire: false,
             lastDeaths: ["none"], nextPhaseAfterChasseur: "vote_village",
             revealRoles: document.getElementById('reveal-roles-death').checked,
@@ -226,15 +239,27 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
     update(ref(db), updates);
 });
 
-// BOUTON REFAIRE UNE PARTIE (RESET DU SALON)
+// BOUTON REFAIRE UNE PARTIE (RESET)
 document.getElementById('btn-restart').addEventListener('click', () => {
     if (amIAdmin) {
         update(ref(db, `rooms/${currentRoom}`), {
             status: "lobby", autoState: null, gameState: null, votes: null
-        });
-    }
-    location.reload();
+        }).then(() => location.reload());
+    } else location.reload();
 });
+
+function showRoleScreen() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('game-screen').classList.add('active');
+    if(currentPlayers[myPlayerId]) {
+        document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId].role;
+    }
+}
+
+function showNarratorScreen() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('narrator-screen').classList.add('active');
+}
 
 // ==========================================
 // MOTEUR 1 : NARRATEUR AUTO (EN LIGNE)
@@ -247,13 +272,6 @@ function handleAutoPhase() {
     const dayAnnounce = document.getElementById('day-announcement');
     const voteZone = document.getElementById('vote-zone');
     const voteSubtitle = document.getElementById('vote-subtitle');
-
-    if (document.getElementById('lobby-screen').classList.contains('active')) {
-        document.getElementById('lobby-screen').classList.remove('active');
-        document.getElementById('game-screen').classList.add('active');
-        document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId].role;
-        if (amIAdmin) document.getElementById('admin-auto-bar').style.display = "flex";
-    }
 
     voteZone.style.display = "none";
     document.getElementById('my-vote-status').textContent = "";
@@ -376,13 +394,13 @@ function advanceAutoPhase() {
     let deadThisTurn = [];
 
     let winMsg = checkWinCondition(autoState.lovers);
-    if (winMsg && !["start", "nuit", "voyante", "loups", "sorciere", "cupidon"].includes(phase)) {
+    if (winMsg && !["nuit", "voyante", "loups", "sorciere", "cupidon"].includes(phase)) {
         updates[`rooms/${currentRoom}/autoState/phase`] = "endgame";
         updates[`rooms/${currentRoom}/autoState/winnerMsg`] = winMsg;
         update(ref(db), updates); return;
     }
 
-    if (phase === "start" || phase === "resultat_village" || phase === "resultat_chasseur" && autoState.nextPhaseAfterChasseur === "nuit") nextPhase = "nuit";
+    if (phase === "resultat_village" || phase === "resultat_chasseur" && autoState.nextPhaseAfterChasseur === "nuit") nextPhase = "nuit";
     else if (phase === "nuit" || phase === "cupidon" || phase === "voyante") {
         if (phase === "cupidon") {
             let loverIds = Object.values(currentVotes)[0] || [];
