@@ -11,8 +11,8 @@
         .screen.active { display: block; animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .input-zone { display: flex; flex-direction: column; gap: 15px; margin-top: 30px;}
-        input[type="text"], input[type="number"] { padding: 15px; border-radius: 8px; border: none; font-size: 16px; background-color: #2a3a5a; color: white; text-align: center; outline: none; transition: 0.3s;}
-        input[type="text"]:focus { box-shadow: 0 0 0 2px #e94560; }
+        input[type="text"], input[type="number"], select { padding: 15px; border-radius: 8px; border: none; font-size: 16px; background-color: #2a3a5a; color: white; text-align: center; outline: none; transition: 0.3s;}
+        input[type="text"]:focus, select:focus { box-shadow: 0 0 0 2px #e94560; }
         button { background-color: #e94560; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: 0.2s; margin-top: 10px;}
         button:hover { background-color: #ff4a6a; transform: translateY(-2px); }
         .kick-btn { background: #ff4a6a; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; margin-left: 10px; width: auto; margin-top: 0;}
@@ -26,19 +26,23 @@
         .settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px;}
         .theme-section { flex-direction: column; align-items: flex-start; gap: 10px; }
         .role-label { display: flex; align-items: center; gap: 10px; font-size: 15px; background: #16213e; padding: 10px; border-radius: 8px; width: calc(100% - 20px); cursor: pointer; margin-bottom: 5px;}
-        .custom-select { padding: 10px; border-radius: 8px; background: #2a3a5a; color: white; border: none; font-size: 14px; outline: none; width: 55%;}
         .small-input { width: 60px !important; padding: 10px !important; border-radius: 8px; background: #2a3a5a; color: white; border: none; text-align: center; font-weight: bold; font-size: 16px;}
         .custom-checkbox { width: 20px; height: 20px; accent-color: #e94560;}
         .role-card { background: #0f3460; border: 3px dashed #e94560; border-radius: 15px; padding: 40px 20px; margin-top: 20px; cursor: pointer; user-select: none; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px;}
         .role-card:active { transform: scale(0.95); background: #16213e;}
-        #dead-screen { background-color: #5a0000; color: white;}
         .vote-panel { background: #1a1a2e; padding: 15px; border-radius: 10px; border: 1px solid #ffbc00; margin-top: 20px; }
-        .auto-narrator-msg { background: #fff; color: #000; padding: 15px; border-radius: 10px; font-weight: bold; margin-top: 20px; font-size: 1.1em; border: 3px solid #e94560;}
         .target-btn { background: #2a3a5a; padding: 12px; margin: 0; width: 100%; border-radius: 8px; color: white; border: 2px solid transparent; cursor: pointer; transition: 0.2s; font-size: 15px;}
         .target-btn:hover { background: #3a4a6a; }
         #btn-confirm-action { background-color: #28a745; margin-top: 15px; font-size: 1.1em;}
         #btn-confirm-action:hover { background-color: #34ce57; }
-        .witch-section { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #9b59b6;}
+        
+        /* Nouveaux styles Narrateur Guidé */
+        .narrator-guide-box { background: #ffbc00; color: #000; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: left;}
+        .narrator-script { font-style: italic; font-size: 1.1em; font-weight: bold; margin-bottom: 15px; border-left: 4px solid #e94560; padding-left: 10px;}
+        .narrator-action-area { background: #16213e; padding: 15px; border-radius: 8px; color: white; margin-bottom: 15px;}
+        .narrator-history { background: #0f3460; padding: 15px; border-radius: 8px; font-size: 0.9em; text-align: left; margin-bottom: 20px; border: 1px solid #555;}
+        
+        #dead-screen { background-color: #5a0000; color: white;}
         #endgame-screen { background-color: #ffd700; color: #16213e; }
     </style>
 </head>
@@ -48,9 +52,9 @@
         <div id="login-screen" class="screen active">
             <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
             <h1>🐺 Loup-Garou</h1>
-            <p>Multijoueur en direct</p>
+            <p>Assistant Maître du Jeu</p>
             <div class="input-zone">
-                <input type="text" id="player-name" placeholder="Ton pseudo" maxlength="18">
+                <input type="text" id="player-name" placeholder="Ton pseudo" maxlength="15">
                 <input type="text" id="room-code" placeholder="Code du salon (ex: 1234)" maxlength="6">
                 <button id="join-btn">Rejoindre la partie</button>
             </div>
@@ -64,17 +68,10 @@
 
             <div id="admin-panel" class="settings-box-container" style="display: none;">
                 <h3 style="margin-top: 0;">👑 Panneau Admin</h3>
-                <div class="settings-row">
-                    <label>Mode :</label>
-                    <select id="game-mode" class="custom-select">
-                        <option value="auto">🤖 Narrateur Automatique</option>
-                        <option value="humain">🗣️ Narrateur Humain</option>
-                    </select>
-                </div>
                 
-                <div id="narrator-select-row" class="settings-row" style="display: none;">
+                <div class="settings-row">
                     <label>Le Narrateur :</label>
-                    <select id="narrator-id" class="custom-select"></select>
+                    <select id="narrator-id" style="width: 55%; padding: 10px;"></select>
                 </div>
 
                 <div class="settings-row">
@@ -96,8 +93,7 @@
 
                 <div class="theme-section">
                     <label>Règles :</label>
-                    <label class="role-label"><input type="checkbox" id="reveal-roles-death" class="custom-checkbox" checked> 🪦 Révéler le rôle des morts</label>
-                    <label class="role-label"><input type="checkbox" id="rule-witch-attacked" class="custom-checkbox"> 🧪 Sorcière agit même si attaquée</label>
+                    <label class="role-label"><input type="checkbox" id="reveal-roles-death" class="custom-checkbox" checked> 🪦 Révéler les rôles à la mort</label>
                 </div>
 
                 <button id="start-game-btn">Distribuer les rôles !</button>
@@ -106,7 +102,7 @@
         </div>
 
         <!-- ECRAN JOUEUR EN VIE -->
-        <div id="game-screen" class="screen" style="position: relative; padding-bottom: 80px;">
+        <div id="game-screen" class="screen" style="position: relative; padding-bottom: 20px;">
             <h2>Ton rôle secret est...</h2>
             <div class="role-card" id="role-card">
                 <p id="role-instruction" style="color:#888;">Reste appuyé ici pour voir</p>
@@ -114,77 +110,68 @@
                 <p id="my-lover-display" style="display:none; color: #ff69b4; margin-top: 10px; font-weight: bold;"></p>
             </div>
 
-            <div id="auto-narrator-display" class="auto-narrator-msg" style="display: none;"></div>
+            <!-- ANNONCES DU JOUR -->
+            <div id="day-announcement" style="display: none; background: #fff; color: #000; padding: 15px; border-radius: 10px; font-weight: bold; margin-top: 20px; border: 3px solid #e94560;"></div>
 
-            <!-- ZONE DE VOTE -->
+            <!-- ZONE DE VOTE DU VILLAGE (Pour les joueurs) -->
             <div id="vote-zone" class="vote-panel" style="display: none;">
-                <h3 id="vote-title" style="color: #ffbc00; margin-top: 0;">🗳️ Action</h3>
-                <p id="vote-subtitle" style="font-size: 0.9em; margin-bottom: 10px;"></p>
-                
-                <div id="witch-options" style="display: none; text-align: left;">
-                    <div class="witch-section" id="witch-revive-section">
-                        <p style="color: #28a745; font-weight: bold; margin-top: 0;">🧪 Potion de Vie</p>
-                        <p>Les loups ont attaqué : <span id="witch-victim-name" style="font-weight:bold; color:white;"></span></p>
-                        <label><input type="checkbox" id="witch-revive-check" class="custom-checkbox"> Sauver ce joueur</label>
-                    </div>
-                    <div class="witch-section" id="witch-kill-section">
-                        <p style="color: #e94560; font-weight: bold; margin-top: 0;">☠️ Potion de Mort</p>
-                        <p style="font-size: 0.9em;">Sélectionnez une victime (Optionnel)</p>
-                    </div>
-                </div>
-
+                <h3 style="color: #ffbc00; margin-top: 0;">🗳️ Vote du Village</h3>
+                <p style="font-size: 0.9em; margin-bottom: 10px;">Le Narrateur a ouvert les votes.</p>
                 <div id="vote-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                <button id="btn-confirm-action" style="display: none;">✅ Confirmer</button>
+                <button id="btn-confirm-action" style="display: none;">✅ Confirmer mon vote</button>
                 <p id="my-vote-status" style="color: #e94560; font-weight: bold; margin-top: 10px;"></p>
             </div>
 
-            <!-- VOILE NOIR -->
+            <!-- VOILE NOIR DE LA NUIT -->
             <div id="night-cover" style="display:none; position:absolute; top:-30px; left:-30px; right:-30px; bottom:-30px; background:rgba(0,0,0,0.98); z-index:100; flex-direction:column; justify-content:center; align-items:center;">
                 <h1 style="font-size: 4em; margin:0;">🌙</h1>
                 <h2>La nuit tombe...</h2>
-                <p style="color:#888;">Le village s'endort.</p>
-            </div>
-
-            <!-- BARRE ADMIN (MODE AUTO) -->
-            <div id="admin-auto-bar" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #16213e; padding: 15px; z-index: 1000; justify-content: space-between; align-items: center; border-top: 2px solid #e94560;">
-                <div style="text-align: left;">
-                    <span style="font-weight: bold; font-size: 1.1em;">🤖 Mode Auto</span><br>
-                    <span id="vote-progress" style="font-size: 0.9em; color: #ffbc00;">0 action(s) validée(s)</span>
-                </div>
-                <button id="btn-next-phase" style="background: white; color: #e94560; width: auto; margin: 0; padding: 10px 20px;">Suivant ➡️</button>
+                <p style="color:#888;">Le village s'endort. Silence.</p>
             </div>
         </div>
 
-        <!-- ECRAN NARRATEUR HUMAIN -->
+        <!-- ECRAN NARRATEUR (GUIDÉ) -->
         <div id="narrator-screen" class="screen">
-            <h2 id="narrator-title">👁️ Tableau de Bord</h2>
-            <div style="display:flex; gap:10px; margin-bottom: 15px;">
-                <button id="btn-night" style="background:#0a0a1a; border: 1px solid #555;">🌙 Nuit</button>
-                <button id="btn-day" style="background:#ffbc00; color: #000;">☀️ Jour</button>
+            <h2 style="margin-bottom: 5px;">👁️ Maître du Jeu</h2>
+            
+            <div id="narrator-history" class="narrator-history">
+                <strong style="color:#ffbc00;">Journal de la Nuit :</strong><br>
+                <span id="history-text" style="color:#aaa;">Rien à signaler.</span>
             </div>
-            <div class="vote-panel" style="margin-bottom: 20px;">
-                <button id="btn-toggle-vote" style="background:#ffbc00; color: #000; margin-top: 0;">Ouvrir les votes Village</button>
+
+            <div class="narrator-guide-box">
+                <div id="narrator-script" class="narrator-script">"La nuit tombe sur le village..."</div>
+                <div id="narrator-action-area" class="narrator-action-area">
+                    <!-- Les inputs du narrateur s'afficheront ici dynamiquement -->
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-narrator-revote" style="display: none; background: #333; color: white;">🔄 Refaire voter</button>
+                    <button id="btn-narrator-next" style="background: #e94560; color: white; border: 2px solid white;">Suivant ➡️</button>
+                </div>
             </div>
-            <p style="margin-bottom:5px;">Rôles des joueurs :</p>
-            <ul id="narrator-player-list"></ul>
-            <button onclick="location.reload()" style="background:#333; margin-top: 20px;">Fin de partie</button>
+
+            <div class="settings-box-container" style="margin-top: 0; padding: 15px;">
+                <h3 style="margin-top:0; font-size:16px;">État des Joueurs</h3>
+                <ul id="narrator-player-list" style="margin:0; font-size:14px;"></ul>
+            </div>
         </div>
 
         <!-- ECRAN MORT -->
         <div id="dead-screen" class="screen">
             <h1 style="font-size: 3em; margin-bottom: 0;">💀</h1>
             <h1 style="color: white;">TU ES MORT</h1>
-            <p>Observe la suite en silence.</p>
-            <button onclick="location.reload()" style="background:#111; margin-top:30px;">Quitter</button>
+            <p>Observe la suite en silence absolu.</p>
+            <button onclick="location.reload()" style="background:#111; margin-top:30px;">Quitter le salon</button>
         </div>
 
         <!-- ECRAN FIN -->
         <div id="endgame-screen" class="screen">
             <h1 style="font-size: 4em; margin-bottom: 0;">🏆</h1>
             <h1 id="endgame-winner">Fin de partie !</h1>
-            <button onclick="location.reload()" style="background:#16213e; color:white; margin-top:30px;">Refaire une partie</button>
+            <button onclick="location.reload()" style="background:#16213e; color:white; margin-top:30px;">Retourner au Menu</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=110"></script>
+    <script type="module" src="script.js?v=120"></script>
 </body>
 </html>
