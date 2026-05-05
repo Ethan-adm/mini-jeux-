@@ -26,6 +26,7 @@
         .settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px;}
         .theme-section { flex-direction: column; align-items: flex-start; gap: 10px; }
         .role-label { display: flex; align-items: center; gap: 10px; font-size: 15px; background: #16213e; padding: 10px; border-radius: 8px; width: calc(100% - 20px); cursor: pointer; margin-bottom: 5px;}
+        .custom-select { padding: 10px; border-radius: 8px; background: #2a3a5a; color: white; border: none; font-size: 14px; outline: none; width: 55%;}
         .small-input { width: 60px !important; padding: 10px !important; border-radius: 8px; background: #2a3a5a; color: white; border: none; text-align: center; font-weight: bold; font-size: 16px;}
         .custom-checkbox { width: 20px; height: 20px; accent-color: #e94560;}
         .role-card { background: #0f3460; border: 3px dashed #e94560; border-radius: 15px; padding: 40px 20px; margin-top: 20px; cursor: pointer; user-select: none; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px;}
@@ -35,8 +36,9 @@
         .target-btn:hover { background: #3a4a6a; }
         #btn-confirm-action { background-color: #28a745; margin-top: 15px; font-size: 1.1em;}
         #btn-confirm-action:hover { background-color: #34ce57; }
+        .witch-section { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #9b59b6;}
         
-        /* Nouveaux styles Narrateur Guidé */
+        /* Styles Narrateur Humain */
         .narrator-guide-box { background: #ffbc00; color: #000; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: left;}
         .narrator-script { font-style: italic; font-size: 1.1em; font-weight: bold; margin-bottom: 15px; border-left: 4px solid #e94560; padding-left: 10px;}
         .narrator-action-area { background: #16213e; padding: 15px; border-radius: 8px; color: white; margin-bottom: 15px;}
@@ -44,6 +46,7 @@
         
         #dead-screen { background-color: #5a0000; color: white;}
         #endgame-screen { background-color: #ffd700; color: #16213e; }
+        .auto-narrator-msg { background: #fff; color: #000; padding: 15px; border-radius: 10px; font-weight: bold; margin-top: 20px; font-size: 1.1em; border: 3px solid #e94560;}
     </style>
 </head>
 <body>
@@ -52,7 +55,7 @@
         <div id="login-screen" class="screen active">
             <button class="back-btn" onclick="window.location.href='../index.html'">⬅ Retour au Hub</button>
             <h1>🐺 Loup-Garou</h1>
-            <p>Assistant Maître du Jeu</p>
+            <p>Multijoueur en direct</p>
             <div class="input-zone">
                 <input type="text" id="player-name" placeholder="Ton pseudo" maxlength="15">
                 <input type="text" id="room-code" placeholder="Code du salon (ex: 1234)" maxlength="6">
@@ -70,6 +73,14 @@
                 <h3 style="margin-top: 0;">👑 Panneau Admin</h3>
                 
                 <div class="settings-row">
+                    <label>Mode de Jeu :</label>
+                    <select id="game-mode" class="custom-select">
+                        <option value="auto">🤖 Narrateur Auto (En ligne)</option>
+                        <option value="humain">🗣️ Narrateur Humain (Présentiel)</option>
+                    </select>
+                </div>
+
+                <div id="narrator-select-row" class="settings-row" style="display: none;">
                     <label>Le Narrateur :</label>
                     <select id="narrator-id" style="width: 55%; padding: 10px;"></select>
                 </div>
@@ -94,6 +105,7 @@
                 <div class="theme-section">
                     <label>Règles :</label>
                     <label class="role-label"><input type="checkbox" id="reveal-roles-death" class="custom-checkbox" checked> 🪦 Révéler les rôles à la mort</label>
+                    <label class="role-label"><input type="checkbox" id="rule-witch-attacked" class="custom-checkbox"> 🧪 Sorcière agit si attaquée (Auto)</label>
                 </div>
 
                 <button id="start-game-btn">Distribuer les rôles !</button>
@@ -102,7 +114,7 @@
         </div>
 
         <!-- ECRAN JOUEUR EN VIE -->
-        <div id="game-screen" class="screen" style="position: relative; padding-bottom: 20px;">
+        <div id="game-screen" class="screen" style="position: relative; padding-bottom: 80px;">
             <h2>Ton rôle secret est...</h2>
             <div class="role-card" id="role-card">
                 <p id="role-instruction" style="color:#888;">Reste appuyé ici pour voir</p>
@@ -111,14 +123,28 @@
             </div>
 
             <!-- ANNONCES DU JOUR -->
-            <div id="day-announcement" style="display: none; background: #fff; color: #000; padding: 15px; border-radius: 10px; font-weight: bold; margin-top: 20px; border: 3px solid #e94560;"></div>
+            <div id="day-announcement" class="auto-narrator-msg" style="display: none;"></div>
 
-            <!-- ZONE DE VOTE DU VILLAGE (Pour les joueurs) -->
+            <!-- ZONE DE VOTE DU VILLAGE/NUIT -->
             <div id="vote-zone" class="vote-panel" style="display: none;">
-                <h3 style="color: #ffbc00; margin-top: 0;">🗳️ Vote du Village</h3>
-                <p style="font-size: 0.9em; margin-bottom: 10px;">Le Narrateur a ouvert les votes.</p>
+                <h3 id="vote-title" style="color: #ffbc00; margin-top: 0;">🗳️ Vote</h3>
+                <p id="vote-subtitle" style="font-size: 0.9em; margin-bottom: 10px;"></p>
+                
+                <!-- Zone spécifique pour la Sorcière (Mode Auto) -->
+                <div id="witch-options" style="display: none; text-align: left;">
+                    <div class="witch-section" id="witch-revive-section">
+                        <p style="color: #28a745; font-weight: bold; margin-top: 0;">🧪 Potion de Vie</p>
+                        <p>Les loups ont attaqué : <span id="witch-victim-name" style="font-weight:bold; color:white;"></span></p>
+                        <label><input type="checkbox" id="witch-revive-check" class="custom-checkbox"> Sauver ce joueur</label>
+                    </div>
+                    <div class="witch-section" id="witch-kill-section">
+                        <p style="color: #e94560; font-weight: bold; margin-top: 0;">☠️ Potion de Mort</p>
+                        <p style="font-size: 0.9em;">Sélectionnez une victime (Optionnel)</p>
+                    </div>
+                </div>
+
                 <div id="vote-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                <button id="btn-confirm-action" style="display: none;">✅ Confirmer mon vote</button>
+                <button id="btn-confirm-action" style="display: none;">✅ Confirmer</button>
                 <p id="my-vote-status" style="color: #e94560; font-weight: bold; margin-top: 10px;"></p>
             </div>
 
@@ -128,9 +154,18 @@
                 <h2>La nuit tombe...</h2>
                 <p style="color:#888;">Le village s'endort. Silence.</p>
             </div>
+
+            <!-- BARRE DE CONTRÔLE ADMIN (MODE AUTO) -->
+            <div id="admin-auto-bar" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #16213e; padding: 15px; z-index: 1000; justify-content: space-between; align-items: center; border-top: 2px solid #e94560;">
+                <div style="text-align: left;">
+                    <span style="font-weight: bold; font-size: 1.1em;">🤖 Mode Auto</span><br>
+                    <span id="vote-progress" style="font-size: 0.9em; color: #ffbc00;">0 action(s)</span>
+                </div>
+                <button id="btn-next-phase" style="width: auto; margin: 0; padding: 10px 20px;">Suivant ➡️</button>
+            </div>
         </div>
 
-        <!-- ECRAN NARRATEUR (GUIDÉ) -->
+        <!-- ECRAN NARRATEUR (MODE HUMAIN) -->
         <div id="narrator-screen" class="screen">
             <h2 style="margin-bottom: 5px;">👁️ Maître du Jeu</h2>
             
@@ -140,10 +175,8 @@
             </div>
 
             <div class="narrator-guide-box">
-                <div id="narrator-script" class="narrator-script">"La nuit tombe sur le village..."</div>
-                <div id="narrator-action-area" class="narrator-action-area">
-                    <!-- Les inputs du narrateur s'afficheront ici dynamiquement -->
-                </div>
+                <div id="narrator-script" class="narrator-script">"La nuit tombe..."</div>
+                <div id="narrator-action-area" class="narrator-action-area"></div>
                 
                 <div style="display: flex; gap: 10px;">
                     <button id="btn-narrator-revote" style="display: none; background: #333; color: white;">🔄 Refaire voter</button>
@@ -172,6 +205,6 @@
             <button onclick="location.reload()" style="background:#16213e; color:white; margin-top:30px;">Retourner au Menu</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=120"></script>
+    <script type="module" src="script.js?v=130"></script>
 </body>
 </html>
