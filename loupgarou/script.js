@@ -367,7 +367,8 @@ function handleAutoPhase() {
     else if (pName === "vote_village") {
         nightCover.style.display = 'none'; dayAnnounce.style.display = 'none';
         if (currentPlayers[myPlayerId] && !currentPlayers[myPlayerId].isDead) {
-            voteZone.style.display = "block"; document.getElementById('vote-title').textContent = "🗳️ Tribunal du Village";
+            voteZone.style.display = "block";
+            document.getElementById('vote-title').textContent = "🗳️ Tribunal du Village";
             voteSubtitle.textContent = "Votez pour éliminer un suspect."; renderPlayerVoteButtonsCommon("village", autoState);
             parler("C'est l'heure du vote.", pName);
         }
@@ -388,11 +389,15 @@ function getWolfConsensusAuto() {
 }
 
 function advanceAutoPhase() {
-    let phase = autoState.phase; let nextPhase = "nuit"; let updates = {}; let deadThisTurn = [];
-    
+    let phase = autoState.phase;
+    let nextPhase = "nuit";
+    let updates = {};
+    let deadThisTurn = [];
+
     let winMsg = checkWinCondition(autoState.lovers);
     if (winMsg && !["start", "nuit", "voyante", "loups", "sorciere", "cupidon"].includes(phase)) {
-        updates[`rooms/${currentRoom}/autoState/phase`] = "endgame"; updates[`rooms/${currentRoom}/autoState/winnerMsg`] = winMsg;
+        updates[`rooms/${currentRoom}/autoState/phase`] = "endgame";
+        updates[`rooms/${currentRoom}/autoState/winnerMsg`] = winMsg;
         update(ref(db), updates); return;
     }
 
@@ -402,23 +407,28 @@ function advanceAutoPhase() {
     else if (phase === "nuit" || phase === "cupidon" || phase === "voyante") {
         if (phase === "cupidon") {
             let loverIds = Object.values(currentVotes)[0] || [];
-            updates[`rooms/${currentRoom}/autoState/lovers`] = loverIds; updates[`rooms/${currentRoom}/autoState/cupidonDone`] = true;
+            updates[`rooms/${currentRoom}/autoState/lovers`] = loverIds;
+            updates[`rooms/${currentRoom}/autoState/cupidonDone`] = true;
         }
         nextPhase = getNextNightPhase(phase, autoState);
     }
     else if (phase === "loups") {
         let victim = getWolfConsensusAuto();
         if (victim === "not_enough" || victim === "no_consensus") {
-            if(!confirm("Les loups n'ont pas tous voté pareil. Forcer le passage ? (Personne ne meurt)")) return; victim = "none";
+            if(!confirm("Les loups n'ont pas tous voté pareil. Forcer le passage ? (Personne ne meurt)")) return;
+            victim = "none";
         }
-        updates[`rooms/${currentRoom}/autoState/wolfVictim`] = victim; nextPhase = getNextNightPhase("loups", autoState);
+        updates[`rooms/${currentRoom}/autoState/wolfVictim`] = victim;
+        nextPhase = getNextNightPhase("loups", autoState);
     }
     else if (phase === "sorciere") {
         let witchId = Object.keys(currentPlayers).find(id => currentPlayers[id].role === "🧙‍♀️ Sorcière");
         let witchVote = witchId ? currentVotes[witchId] : null;
 
         if (autoState.wolfVictim && autoState.wolfVictim !== "none" && (!witchVote || !witchVote.revive)) deadThisTurn.push(autoState.wolfVictim);
-        if (witchVote && witchVote.kill && witchVote.kill !== "none") { deadThisTurn.push(witchVote.kill); updates[`rooms/${currentRoom}/autoState/witchDeathUsed`] = true; }
+        if (witchVote && witchVote.kill && witchVote.kill !== "none") {
+            deadThisTurn.push(witchVote.kill); updates[`rooms/${currentRoom}/autoState/witchDeathUsed`] = true;
+        }
         if (witchVote && witchVote.revive) updates[`rooms/${currentRoom}/autoState/witchLifeUsed`] = true;
 
         applyDeathsAndMayor(deadThisTurn, autoState, updates, "autoState"); nextPhase = "jour";
@@ -583,18 +593,24 @@ function renderNarratorUI() {
 }
 
 function handleNarratorNext() {
-    let p = gameState.phase; let updates = {}; let next = "nuit_debut"; let newLog = gameState.nightLog || "";
+    let p = gameState.phase; 
+    let updates = {}; 
+    let next = "nuit_debut"; 
+    let newLog = gameState.nightLog || "";
     let deadThisTurn = [];
 
     if (p === "nuit_debut") {
-        newLog = ""; updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        newLog = ""; 
+        updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
         next = getNextNightPhase(p, gameState);
     }
     else if (p === "cupidon") {
-        let c1 = document.getElementById('cup-1').value; let c2 = document.getElementById('cup-2').value;
+        let c1 = document.getElementById('cup-1').value; 
+        let c2 = document.getElementById('cup-2').value;
         if(c1 !== "none" && c2 !== "none") {
-            updates[`rooms/${currentRoom}/gameState/lovers`] = [c1, c2]; updates[`rooms/${currentRoom}/gameState/cupidonDone`] = true;
-            newLog += `🏹 Cupidon a lié ${currentPlayers[c1].name} et ${currentPlayers[c2].name}.`;
+            updates[`rooms/${currentRoom}/gameState/lovers`] = [c1, c2]; 
+            updates[`rooms/${currentRoom}/gameState/cupidonDone`] = true;
+            newLog += `\n🏹 Cupidon a lié ${currentPlayers[c1].name} et ${currentPlayers[c2].name}.`;
         }
         next = getNextNightPhase(p, gameState);
     }
@@ -604,67 +620,117 @@ function handleNarratorNext() {
         next = getNextNightPhase(p, gameState);
     }
     else if (p === "loups") {
-        let w = document.getElementById('wolf-target').value; updates[`rooms/${currentRoom}/gameState/wolfTarget`] = w;
+        let w = document.getElementById('wolf-target').value; 
+        updates[`rooms/${currentRoom}/gameState/wolfTarget`] = w;
         if(w!=="none") newLog += `\n🐺 Loups attaquent ${currentPlayers[w].name}.`;
         next = getNextNightPhase(p, gameState);
     }
     else if (p === "sorciere") {
         let revive = document.getElementById('witch-revive') ? document.getElementById('witch-revive').checked : false;
         let kill = document.getElementById('witch-kill') ? document.getElementById('witch-kill').value : "none";
-        if(revive) { updates[`rooms/${currentRoom}/gameState/witchLifeUsed`] = true; updates[`rooms/${currentRoom}/gameState/wolfTarget`] = "none"; newLog += `\n🧪 Sorcière a sauvé.`; }
-        if(kill !== "none") { updates[`rooms/${currentRoom}/gameState/witchDeathUsed`] = true; updates[`rooms/${currentRoom}/gameState/witchTarget`] = kill; newLog += `\n☠️ Sorcière a tué ${currentPlayers[kill].name}.`; } 
-        else updates[`rooms/${currentRoom}/gameState/witchTarget`] = "none";
-        next = "nuit_fin";
-    }
-    else if (p === "nuit_fin") {
-        if(gameState.wolfTarget && gameState.wolfTarget!=="none") deadThisTurn.push(gameState.wolfTarget);
-        if(gameState.witchTarget && gameState.witchTarget!=="none") deadThisTurn.push(gameState.witchTarget);
-        applyDeathsAndMayor(deadThisTurn, gameState, updates, "gameState"); next = "jour";
+        
+        if(revive) { 
+            updates[`rooms/${currentRoom}/gameState/witchLifeUsed`] = true; 
+            updates[`rooms/${currentRoom}/gameState/wolfTarget`] = "none"; 
+            newLog += `\n🧪 Sorcière a sauvé.`; 
+        }
+        if(kill !== "none") { 
+            updates[`rooms/${currentRoom}/gameState/witchDeathUsed`] = true; 
+            updates[`rooms/${currentRoom}/gameState/witchTarget`] = kill; 
+            newLog += `\n☠️ Sorcière a tué ${currentPlayers[kill].name}.`; 
+        } else {
+            updates[`rooms/${currentRoom}/gameState/witchTarget`] = "none";
+        }
+        
+        if (gameState.wolfTarget && gameState.wolfTarget !== "none" && !revive) deadThisTurn.push(gameState.wolfTarget);
+        if (kill !== "none") deadThisTurn.push(kill);
+        
+        applyDeathsAndMayor(deadThisTurn, gameState, updates, "gameState");
+        next = "jour";
     }
     else if (p === "jour") {
         let lastD = gameState.lastDeaths || [];
         if (lastD.some(id => currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur")) {
-            next = "chasseur"; updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = (gameState.dayCount === 1 && gameState.hasMaire && gameState.maireId === "none") ? "election_maire" : "vote_village";
+            next = "chasseur"; 
+            updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = (gameState.dayCount === 1 && gameState.hasMaire && gameState.maireId === "none") ? "election_maire" : "vote_village";
         } else {
             next = (gameState.dayCount === 1 && gameState.hasMaire && gameState.maireId === "none") ? "election_maire" : "vote_village";
         }
     }
     else if (p === "election_maire") {
         let winner = getHighestVotedId(gameState);
-        updates[`rooms/${currentRoom}/gameState/maireId`] = winner || "none"; next = "resultat_election";
+        updates[`rooms/${currentRoom}/gameState/maireId`] = winner || "none"; 
+        next = "resultat_election";
     }
-    else if (p === "resultat_election") next = "vote_village";
+    else if (p === "resultat_election") {
+        next = "vote_village";
+    }
     else if (p === "vote_village") {
         let highest = getHighestVotedId(gameState);
-        if(highest && highest !== "skip") { applyDeathsAndMayor([highest], gameState, updates, "gameState"); newLog += `\n⚖️ Village a tué ${currentPlayers[highest].name}.`; }
-        else updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        if(highest && highest !== "skip") { 
+            applyDeathsAndMayor([highest], gameState, updates, "gameState"); 
+            newLog += `\n⚖️ Village a tué ${currentPlayers[highest].name}.`; 
+        } else {
+            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        }
         next = "resultat_village";
     }
     else if (p === "resultat_village") {
         let lastD = gameState.lastDeaths || [];
         if (lastD.some(id => currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur" && !gameState.chasseurA_Tire)) {
-            next = "chasseur"; updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = "nuit_debut";
-        } else { next = "nuit_debut"; updates[`rooms/${currentRoom}/gameState/dayCount`] = (gameState.dayCount || 1) + 1; }
+            next = "chasseur"; 
+            updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = "nuit_debut";
+        } else { 
+            next = "nuit_debut"; 
+            updates[`rooms/${currentRoom}/gameState/dayCount`] = (gameState.dayCount || 1) + 1; 
+        }
     }
     else if (p === "chasseur") {
         updates[`rooms/${currentRoom}/gameState/chasseurA_Tire`] = true;
         let highest = getHighestVotedId(gameState);
-        if(highest && highest !== "skip") { applyDeathsAndMayor([highest], gameState, updates, "gameState"); newLog += `\n🔫 Chasseur a tué ${currentPlayers[highest].name}.`; }
-        else updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        if(highest && highest !== "skip") { 
+            applyDeathsAndMayor([highest], gameState, updates, "gameState"); 
+            newLog += `\n🔫 Chasseur a tué ${currentPlayers[highest].name}.`; 
+        } else {
+            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        }
         next = "resultat_chasseur";
     }
-    else if (p === "resultat_chasseur") next = gameState.nextPhaseAfterChasseur;
+    else if (p === "resultat_chasseur") {
+        next = gameState.nextPhaseAfterChasseur;
+    }
 
     // CHECK VICTOIRE
-    let winMsg = checkWinCondition(gameState.lovers);
+    let tempPlayers = JSON.parse(JSON.stringify(currentPlayers));
+    let deathsToCheck = updates[`rooms/${currentRoom}/gameState/lastDeaths`] || [];
+    deathsToCheck.forEach(id => { if(id !== "none" && tempPlayers[id]) tempPlayers[id].isDead = true; });
+    
+    let wolves = 0, villagers = 0, loversAlive = 0, totalAlive = 0;
+    for(let id in tempPlayers) {
+        if(!tempPlayers[id].isDead && tempPlayers[id].role && tempPlayers[id].role !== "🗣️ Narrateur" && tempPlayers[id].role !== "En attente") {
+            totalAlive++; 
+            if(tempPlayers[id].role === "🐺 Loup-Garou") wolves++; else villagers++;
+            if (gameState.lovers && gameState.lovers.includes(id)) loversAlive++;
+        }
+    }
+    
+    let winMsg = null;
+    if (totalAlive === 0) winMsg = "Égalité ! Le village est anéanti.";
+    else if (loversAlive === totalAlive && totalAlive === 2) winMsg = "💘 Les Amoureux ont triomphé !";
+    else if (wolves === 0) winMsg = "🧑‍🌾 Le Village a éradiqué les loups !";
+    else if (wolves >= villagers) winMsg = "🐺 Les Loups-Garous ont dévoré le village !";
+
     if (winMsg && !["nuit_debut", "cupidon", "voyante", "loups", "sorciere"].includes(p)) {
         updates[`rooms/${currentRoom}/gameState/phase`] = "endgame";
         updates[`rooms/${currentRoom}/gameState/winnerMsg`] = winMsg;
-    } else updates[`rooms/${currentRoom}/gameState/phase`] = next;
+    } else {
+        updates[`rooms/${currentRoom}/gameState/phase`] = next;
+    }
 
     updates[`rooms/${currentRoom}/gameState/nightLog`] = newLog;
     updates[`rooms/${currentRoom}/votes`] = null; 
-    update(ref(db), updates);
+    
+    update(ref(db), updates).catch(e => console.error("Firebase Update Error:", e));
 }
 
 function renderNarratorPlayerList() {
@@ -731,7 +797,6 @@ function applyDeathsAndMayor(deathsArray, stateObj, updates, stateKey) {
         }
     });
     
-    // Heritage du Maire s'il meurt
     if (stateObj.maireId && actualDeaths.includes(stateObj.maireId)) {
         let aliveIds = Object.keys(currentPlayers).filter(id => !currentPlayers[id].isDead && !actualDeaths.includes(id) && currentPlayers[id].role !== "🗣️ Narrateur" && currentPlayers[id].role !== "En attente");
         updates[`rooms/${currentRoom}/${stateKey}/maireId`] = aliveIds.length > 0 ? aliveIds[Math.floor(Math.random() * aliveIds.length)] : "none";
@@ -842,8 +907,8 @@ function renderPlayerVoteButtonsCommon(type, stateObj) {
     }
 
     let maxSelections = type === "cupidon" ? 2 : 1;
-    if (type === "village") {
-        const skipBtn = document.createElement('button'); skipBtn.textContent = "Ne voter contre personne"; skipBtn.className = "target-btn";
+    if (type === "village" || type === "election_maire") {
+        const skipBtn = document.createElement('button'); skipBtn.textContent = (type === "election_maire") ? "Ne voter pour personne" : "Ne voter contre personne"; skipBtn.className = "target-btn";
         skipBtn.onclick = () => selectTarget("skip", skipBtn, maxSelections); list.appendChild(skipBtn);
     }
 
