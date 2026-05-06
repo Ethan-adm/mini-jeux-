@@ -28,7 +28,6 @@ let autoState = {};
 let gameState = {};    
 let selectedTargetIds = []; 
 
-let lastSpokenPhase = "";
 function parler(texte, phase) {
     if (gameMode !== "auto") return; 
     if (lastSpokenPhase === phase) return; 
@@ -41,7 +40,9 @@ function parler(texte, phase) {
     }
 }
 
+// ==========================================
 // 1. REJOINDRE LE SALON ET ECOUTES GLOBALES
+// ==========================================
 document.getElementById('join-btn').addEventListener('click', () => {
     let rawName = document.getElementById('player-name').value.trim();
     const room = document.getElementById('room-code').value.trim().toUpperCase();
@@ -71,7 +72,6 @@ document.getElementById('join-btn').addEventListener('click', () => {
 
     document.getElementById('display-room-code').textContent = room; 
 
-    // ECOUTES CENTRALISÉES
     onValue(ref(db, `rooms/${room}/status`), snap => { 
         let val = snap.val();
         if (val === "lobby" || !val) {
@@ -289,54 +289,48 @@ function handleAutoPhase() {
     let canVote = false;
     if (!currentPlayers[myPlayerId]?.isDead && ["cupidon", "voyante", "loups", "sorciere", "election_maire", "vote_village"].includes(pName)) canVote = true;
     if (pName === "chasseur" && currentPlayers[myPlayerId]?.role === "🔫 Chasseur") canVote = true; // Chasseur vote mort
-    voteZone.style.display = canVote ? 'block' : 'none';
+    
+    if (canVote) voteZone.style.display = 'block';
+    else voteZone.style.display = 'none';
 
     if (currentAutoPhaseRendered !== pName) {
         currentAutoPhaseRendered = pName;
         document.getElementById('my-vote-status').textContent = "";
         
         if (pName === "nuit") parler("La nuit tombe sur le village.", pName);
-        else if (pName === "cupidon") {
+        else if (pName === "cupidon" && canVote) {
             parler("Cupidon désigne deux amoureux.", pName);
-            if (currentPlayers[myPlayerId]?.role === "🏹 Cupidon") {
-                document.getElementById('vote-title').textContent = "🏹 Formez le couple";
-                voteSubtitle.textContent = "Sélectionnez 2 joueurs."; renderPlayerVoteButtonsCommon("cupidon", autoState);
-            } else voteZone.style.display = 'none';
+            document.getElementById('vote-title').textContent = "🏹 Formez le couple";
+            voteSubtitle.textContent = "Sélectionnez 2 joueurs."; renderPlayerVoteButtonsCommon("cupidon", autoState, pName);
         }
-        else if (pName === "voyante") {
+        else if (pName === "voyante" && canVote) {
             parler("La voyante choisit un joueur.", pName);
-            if (currentPlayers[myPlayerId]?.role === "👁️ Voyante") {
-                document.getElementById('vote-title').textContent = "👁️ Choisis qui inspecter";
-                voteSubtitle.textContent = "Son rôle secret s'affichera ici."; renderPlayerVoteButtonsCommon("voyante", autoState);
-            } else voteZone.style.display = 'none';
+            document.getElementById('vote-title').textContent = "👁️ Choisis qui inspecter";
+            voteSubtitle.textContent = "Son rôle secret s'affichera ici."; renderPlayerVoteButtonsCommon("voyante", autoState, pName);
         }
-        else if (pName === "loups") {
+        else if (pName === "loups" && canVote) {
             parler("Les loups-garous choisissent leur victime.", pName);
-            if (currentPlayers[myPlayerId]?.role === "🐺 Loup-Garou") {
-                document.getElementById('vote-title').textContent = "🐺 Cible de la Meute";
-                voteSubtitle.textContent = "Mettez-vous d'accord !"; renderPlayerVoteButtonsCommon("loups", autoState);
-            } else voteZone.style.display = 'none';
+            document.getElementById('vote-title').textContent = "🐺 Cible de la Meute";
+            voteSubtitle.textContent = "Mettez-vous d'accord !"; renderPlayerVoteButtonsCommon("loups", autoState, pName);
         }
-        else if (pName === "sorciere") {
+        else if (pName === "sorciere" && canVote) {
             parler("La sorcière se réveille.", pName);
-            if (currentPlayers[myPlayerId]?.role === "🧙‍♀️ Sorcière") {
-                if (autoState.wolfVictim === myPlayerId && !autoState.witchActsIfAttacked) {
-                    dayAnnounce.style.display = "block"; voteZone.style.display = 'none';
-                    dayAnnounce.textContent = "🩸 Les loups t'ont attaquée ! Tu es trop faible pour tes potions.";
-                    set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), "skip"); 
-                } else {
-                    document.getElementById('vote-title').textContent = "🧙‍♀️ Tes Potions";
-                    voteSubtitle.textContent = ""; renderPlayerVoteButtonsCommon("sorciere", autoState);
-                }
-            } else voteZone.style.display = 'none';
+            if (autoState.wolfVictim === myPlayerId && !autoState.witchActsIfAttacked) {
+                dayAnnounce.style.display = "block"; voteZone.style.display = 'none';
+                dayAnnounce.textContent = "🩸 Les loups t'ont attaquée ! Tu es trop faible pour tes potions.";
+                set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), "skip"); 
+            } else {
+                document.getElementById('vote-title').textContent = "🧙‍♀️ Tes Potions";
+                voteSubtitle.textContent = ""; renderPlayerVoteButtonsCommon("sorciere", autoState, pName);
+            }
         }
         else if (pName === "jour" || pName === "resultat_village") {
             let txt = annoncerMortsUI(autoState); dayAnnounce.textContent = txt;
             parler((pName === "jour" ? "Le soleil se lève. " : "") + txt, pName);
         }
-        else if (pName === "election_maire") {
+        else if (pName === "election_maire" && canVote) {
             document.getElementById('vote-title').textContent = "🎖️ Élection du Maire";
-            voteSubtitle.textContent = "Votez pour le joueur de votre choix."; renderPlayerVoteButtonsCommon("election_maire", autoState);
+            voteSubtitle.textContent = "Votez pour le joueur de votre choix."; renderPlayerVoteButtonsCommon("election_maire", autoState, pName);
             parler("C'est l'heure d'élire le maire du village.", pName);
         }
         else if (pName === "resultat_election") {
@@ -344,26 +338,24 @@ function handleAutoPhase() {
             let txt = `Le nouveau Maire est ${mName} ! Son vote compte double.`;
             dayAnnounce.textContent = txt; parler(txt, pName);
         }
-        else if (pName === "chasseur") {
+        else if (pName === "chasseur" && canVote) {
             parler("Le chasseur est mort ! Il a un dernier tir.", pName);
-            if (currentPlayers[myPlayerId]?.role === "🔫 Chasseur") {
-                document.getElementById('vote-title').textContent = "🔫 Ultimatum du Chasseur";
-                voteSubtitle.textContent = "Tire sur quelqu'un avant de partir !"; renderPlayerVoteButtonsCommon("chasseur", autoState);
-            } else voteZone.style.display = 'none';
+            document.getElementById('vote-title').textContent = "🔫 Ultimatum du Chasseur";
+            voteSubtitle.textContent = "Tire sur quelqu'un avant de partir !"; renderPlayerVoteButtonsCommon("chasseur", autoState, pName);
         }
         else if (pName === "resultat_chasseur") {
             let txt = annoncerMortsUI(autoState); dayAnnounce.textContent = txt; parler(txt, pName);
         }
-        else if (pName === "vote_village") {
+        else if (pName === "vote_village" && canVote) {
             document.getElementById('vote-title').textContent = "🗳️ Tribunal du Village";
-            voteSubtitle.textContent = "Votez pour éliminer un suspect."; renderPlayerVoteButtonsCommon("village", autoState);
+            voteSubtitle.textContent = "Votez pour éliminer un suspect."; renderPlayerVoteButtonsCommon("village", autoState, pName);
             parler("C'est l'heure du vote.", pName);
         }
     }
 }
 
 document.getElementById('btn-next-phase').addEventListener('click', (e) => {
-    e.target.disabled = true; setTimeout(() => { if(e.target) e.target.disabled = false; }, 1500); // Anti-spam double clic
+    e.target.disabled = true; setTimeout(() => { if(e.target) e.target.disabled = false; }, 1500); 
     if (gameMode === "auto") advanceAutoPhase();
 });
 
@@ -476,7 +468,10 @@ function renderPlayerUIHumain() {
     let isNight = ["nuit_debut", "cupidon", "voyante", "loups", "sorciere", "nuit_fin"].includes(gameState.phase);
     nightCover.style.display = isNight ? "flex" : "none";
 
-    // Gestion de l'affichage unique (éviter le clignotement)
+    let canVote = false;
+    if (!currentPlayers[myPlayerId]?.isDead && ["vote_village", "election_maire"].includes(gameState.phase)) canVote = true;
+    if (gameState.phase === "chasseur" && currentPlayers[myPlayerId]?.role === "🔫 Chasseur") canVote = true; 
+
     if (currentHumainPhaseRendered !== gameState.phase) {
         currentHumainPhaseRendered = gameState.phase;
         voteZone.style.display = "none"; dayAnnounce.style.display = "none";
@@ -490,18 +485,13 @@ function renderPlayerUIHumain() {
             } else { dayAnnounce.textContent = annoncerMortsUI(gameState); }
         }
 
-        // LE CORRECTIF POUR LE CHASSEUR EST ICI !
-        let canVote = false;
-        if (!currentPlayers[myPlayerId]?.isDead && (gameState.phase === "vote_village" || gameState.phase === "election_maire")) canVote = true;
-        if (gameState.phase === "chasseur" && currentPlayers[myPlayerId]?.role === "🔫 Chasseur") canVote = true; // Le chasseur vote MORT
-
         if (canVote) {
             voteZone.style.display = "block";
             let title = "🗳️ Vote du Village";
             if (gameState.phase === "chasseur") title = "🔫 Ultimatum";
             if (gameState.phase === "election_maire") title = "🎖️ Élection du Maire";
             document.getElementById('vote-title').textContent = title;
-            renderPlayerVoteButtonsCommon(gameState.phase === "chasseur" ? "chasseur" : (gameState.phase === "election_maire" ? "election_maire" : "village"), gameState); 
+            renderPlayerVoteButtonsCommon(gameState.phase === "chasseur" ? "chasseur" : (gameState.phase === "election_maire" ? "election_maire" : "village"), gameState, gameState.phase); 
         }
     }
 }
@@ -518,7 +508,6 @@ function renderNarratorUI() {
         actionBox.innerHTML = ""; revoteBtn.style.display = "none";
         nextBtn.textContent = "Suivant ➡️"; 
         
-        // Anti double-clic très important pour le Narrateur Humain
         nextBtn.onclick = (e) => {
             e.target.disabled = true; setTimeout(() => { if(e.target) e.target.disabled = false; }, 1500);
             handleNarratorNext();
@@ -569,7 +558,6 @@ function renderNarratorUI() {
         }
     }
 
-    // Affichage des votes en direct sans détruire les boutons
     if (gameState.phase === "election_maire" || gameState.phase === "vote_village") {
         let voteHtml = `<p style="color:#ffbc00; font-weight:bold;">Votes en cours :</p><ul>`;
         let counts = {};
@@ -625,53 +613,80 @@ function handleNarratorNext() {
         if(kill !== "none") { 
             updates[`rooms/${currentRoom}/gameState/witchDeathUsed`] = true; updates[`rooms/${currentRoom}/gameState/witchTarget`] = kill; 
             newLog += `\n☠️ Sorcière a tué ${currentPlayers[kill].name}.`; 
-        } else updates[`rooms/${currentRoom}/gameState/witchTarget`] = "none";
+        } else {
+            updates[`rooms/${currentRoom}/gameState/witchTarget`] = "none";
+        }
         
         if (gameState.wolfTarget && gameState.wolfTarget !== "none" && !revive) deadThisTurn.push(gameState.wolfTarget);
         if (kill !== "none") deadThisTurn.push(kill);
         
-        applyDeathsAndMayor(deadThisTurn, gameState, updates, "gameState"); next = "jour";
+        applyDeathsAndMayor(deadThisTurn, gameState, updates, "gameState");
+        next = "jour";
     }
     else if (p === "jour") {
         let lastD = gameState.lastDeaths || [];
         if (lastD.some(id => id !== "none" && currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur")) {
-            next = "chasseur"; updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = (gameState.dayCount === 1 && gameState.hasMaire && gameState.maireId === "none") ? "election_maire" : "vote_village";
-        } else next = (gameState.dayCount === 1 && gameState.hasMaire && gameState.maireId === "none") ? "election_maire" : "vote_village";
+            next = "chasseur"; 
+            updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = (gameState.dayCount === 1 && gameState.hasMaire && gameState.maireId === "none") ? "election_maire" : "vote_village";
+        } else {
+            next = (gameState.dayCount === 1 && gameState.hasMaire && gameState.maireId === "none") ? "election_maire" : "vote_village";
+        }
     }
     else if (p === "election_maire") {
         let winner = getHighestVotedId(gameState);
-        updates[`rooms/${currentRoom}/gameState/maireId`] = winner || "none"; next = "resultat_election";
+        updates[`rooms/${currentRoom}/gameState/maireId`] = winner || "none"; 
+        next = "resultat_election";
     }
-    else if (p === "resultat_election") next = "vote_village";
+    else if (p === "resultat_election") {
+        next = "vote_village";
+    }
     else if (p === "vote_village") {
         let highest = getHighestVotedId(gameState);
         if(highest && highest !== "skip" && highest !== "none") { 
-            applyDeathsAndMayor([highest], gameState, updates, "gameState"); newLog += `\n⚖️ Village a tué ${currentPlayers[highest].name}.`; 
-        } else updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+            applyDeathsAndMayor([highest], gameState, updates, "gameState"); 
+            newLog += `\n⚖️ Village a tué ${currentPlayers[highest].name}.`; 
+        } else {
+            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        }
         next = "resultat_village";
     }
     else if (p === "resultat_village") {
         let lastD = gameState.lastDeaths || [];
         if (lastD.some(id => id !== "none" && currentPlayers[id] && currentPlayers[id].role === "🔫 Chasseur" && !gameState.chasseurA_Tire)) {
-            next = "chasseur"; updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = "nuit_debut";
-        } else { next = "nuit_debut"; updates[`rooms/${currentRoom}/gameState/dayCount`] = (gameState.dayCount || 1) + 1; updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"]; }
+            next = "chasseur"; 
+            updates[`rooms/${currentRoom}/gameState/nextPhaseAfterChasseur`] = "nuit_debut";
+        } else { 
+            next = "nuit_debut"; 
+            updates[`rooms/${currentRoom}/gameState/dayCount`] = (gameState.dayCount || 1) + 1; 
+            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        }
     }
     else if (p === "chasseur") {
         updates[`rooms/${currentRoom}/gameState/chasseurA_Tire`] = true;
         let highest = getHighestVotedId(gameState);
         if(highest && highest !== "skip" && highest !== "none") { 
-            applyDeathsAndMayor([highest], gameState, updates, "gameState"); newLog += `\n🔫 Chasseur a tué ${currentPlayers[highest].name}.`; 
-        } else updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+            applyDeathsAndMayor([highest], gameState, updates, "gameState"); 
+            newLog += `\n🔫 Chasseur a tué ${currentPlayers[highest].name}.`; 
+        } else {
+            updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        }
         next = "resultat_chasseur";
     }
-    else if (p === "resultat_chasseur") next = gameState.nextPhaseAfterChasseur;
+    else if (p === "resultat_chasseur") {
+        next = gameState.nextPhaseAfterChasseur;
+    }
 
     let winMsg = checkWinCondition(gameState.lovers, updates[`rooms/${currentRoom}/gameState/lastDeaths`] || []);
     if (winMsg && !["nuit_debut", "cupidon", "voyante", "loups", "sorciere"].includes(p)) {
-        updates[`rooms/${currentRoom}/gameState/phase`] = "endgame"; updates[`rooms/${currentRoom}/gameState/winnerMsg`] = winMsg;
-    } else updates[`rooms/${currentRoom}/gameState/phase`] = next;
+        updates[`rooms/${currentRoom}/gameState/phase`] = "endgame";
+        updates[`rooms/${currentRoom}/gameState/winnerMsg`] = winMsg;
+    } else {
+        updates[`rooms/${currentRoom}/gameState/phase`] = next;
+    }
 
-    updates[`rooms/${currentRoom}/gameState/nightLog`] = newLog; updates[`rooms/${currentRoom}/votes`] = null; 
+    updates[`rooms/${currentRoom}/gameState/nightLog`] = newLog;
+    updates[`rooms/${currentRoom}/votes`] = null; 
+    
     update(ref(db), updates).catch(err => alert("Erreur serveur: " + err));
 }
 
@@ -689,7 +704,7 @@ function renderNarratorPlayerList() {
 }
 
 // ==========================================
-// UTILITAIRES PARTAGES (Sécurisés au max)
+// UTILITAIRES PARTAGES
 // ==========================================
 function generateSelectAlive(id, label, defaultOpt = "Personne") {
     let html = `<label>${label}</label><select id="${id}" style="width:100%; margin-bottom:10px; padding:10px;"><option value="none">${defaultOpt}</option>`;
@@ -742,10 +757,12 @@ function applyDeathsAndMayor(deathsArray, stateObj, updates, stateKey) {
             updates[`rooms/${currentRoom}/players/${id}/isDead`] = true; actualDeaths.push(id);
         }
     });
+    
     if (stateObj.maireId && actualDeaths.includes(stateObj.maireId)) {
         let aliveIds = Object.keys(currentPlayers).filter(id => !currentPlayers[id].isDead && !actualDeaths.includes(id) && currentPlayers[id].role !== "🗣️ Narrateur" && currentPlayers[id].role !== "En attente");
         updates[`rooms/${currentRoom}/${stateKey}/maireId`] = aliveIds.length > 0 ? aliveIds[Math.floor(Math.random() * aliveIds.length)] : "none";
     }
+    
     updates[`rooms/${currentRoom}/${stateKey}/lastDeaths`] = actualDeaths.length > 0 ? actualDeaths : ["none"];
     return actualDeaths;
 }
@@ -794,7 +811,7 @@ function annoncerMortsUI(stateObj) {
 // ==========================================
 // RENDER BOUTONS VOTE JOUEURS
 // ==========================================
-function renderPlayerVoteButtonsCommon(type, stateObj) {
+function renderPlayerVoteButtonsCommon(type, stateObj, currentPhasePassed) {
     const list = document.getElementById('vote-list'); const witchUI = document.getElementById('witch-options');
     list.innerHTML = ""; witchUI.style.display = "none"; selectedTargetIds = [];
     document.getElementById('btn-confirm-action').style.display = "none";
@@ -803,6 +820,7 @@ function renderPlayerVoteButtonsCommon(type, stateObj) {
         witchUI.style.display = "block"; document.getElementById('btn-confirm-action').style.display = "block";
         let victimId = stateObj.wolfVictim;
         let reviveSec = document.getElementById('witch-revive-section'); let checkRevive = document.getElementById('witch-revive-check'); checkRevive.checked = false;
+
         if (victimId && victimId !== "none" && !stateObj.witchLifeUsed) {
             reviveSec.style.display = "block"; document.getElementById('witch-victim-name').textContent = currentPlayers[victimId].name;
         } else reviveSec.style.display = "none";
@@ -813,6 +831,7 @@ function renderPlayerVoteButtonsCommon(type, stateObj) {
             const skipBtn = document.createElement('button'); skipBtn.textContent = "Ne tuer personne";
             skipBtn.className = "target-btn"; skipBtn.style.border = "2px solid #e94560"; selectedTargetIds = ["skip"];
             skipBtn.onclick = () => selectTarget("skip", skipBtn, 1); list.appendChild(skipBtn);
+
             for (let id in currentPlayers) {
                 if (id === myPlayerId || currentPlayers[id].isDead || currentPlayers[id].role === "🗣️ Narrateur") continue;
                 const btn = document.createElement('button'); btn.textContent = currentPlayers[id].name; btn.className = "target-btn";
@@ -824,7 +843,8 @@ function renderPlayerVoteButtonsCommon(type, stateObj) {
             witchUI.style.display = "none"; list.innerHTML = ""; document.getElementById('btn-confirm-action').style.display = "none";
             set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), { revive: checkRevive.checked, kill: selectedTargetIds[0] === "skip" ? "none" : selectedTargetIds[0] });
             document.getElementById('my-vote-status').textContent = "Potions décidées. Chut...";
-        }; return;
+        };
+        return;
     }
 
     let maxSelections = type === "cupidon" ? 2 : 1;
@@ -846,10 +866,10 @@ function renderPlayerVoteButtonsCommon(type, stateObj) {
         if (selectedTargetIds.length !== maxSelections && !selectedTargetIds.includes("skip")) return;
         document.getElementById('vote-list').innerHTML = ""; document.getElementById('btn-confirm-action').style.display = "none";
 
-        if (currentPhaseName === "voyante" && gameMode === "auto") {
+        if (currentPhasePassed === "voyante" && gameMode === "auto") {
             document.getElementById('my-vote-status').textContent = `🔍 Tu as vu : ${currentPlayers[selectedTargetIds[0]].name} est ${currentPlayers[selectedTargetIds[0]].role}`;
             set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), "done");
-        } else if (currentPhaseName === "cupidon" && gameMode === "auto") {
+        } else if (currentPhasePassed === "cupidon" && gameMode === "auto") {
             set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), selectedTargetIds);
             document.getElementById('my-vote-status').textContent = "Couples formés.";
         } else {
