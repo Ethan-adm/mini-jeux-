@@ -14,7 +14,8 @@
         input[type="text"], input[type="number"], select { padding: 15px; border-radius: 8px; border: none; font-size: 16px; background-color: #2a3a5a; color: white; text-align: center; outline: none; transition: 0.3s;}
         input[type="text"]:focus, select:focus { box-shadow: 0 0 0 2px #e94560; }
         button { background-color: #e94560; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: 0.2s; margin-top: 10px;}
-        button:hover { background-color: #ff4a6a; transform: translateY(-2px); }
+        button:hover:not(:disabled) { background-color: #ff4a6a; transform: translateY(-2px); }
+        button:disabled { background-color: #555; cursor: not-allowed; transform: none; }
         .kick-btn { background: #ff4a6a; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; margin-left: 10px; width: auto; margin-top: 0;}
         .back-btn { background-color: transparent; border: 1px solid rgba(255,255,255,0.3); width: auto; padding: 8px 15px; font-size: 14px; margin-bottom: 20px;}
         h1, h2, h3 { margin-top: 0; }
@@ -201,6 +202,6 @@
             <button id="btn-restart" style="background:#16213e; color:white; margin-top:30px;">Refaire une partie dans ce salon</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=200"></script>
+    <script type="module" src="script.js?v=210"></script>
 </body>
 </html>
