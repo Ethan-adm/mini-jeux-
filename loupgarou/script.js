@@ -41,9 +41,7 @@ function parler(texte, phase) {
     }
 }
 
-// ==========================================
 // 1. REJOINDRE LE SALON ET ECOUTES GLOBALES
-// ==========================================
 document.getElementById('join-btn').addEventListener('click', () => {
     let rawName = document.getElementById('player-name').value.trim();
     const room = document.getElementById('room-code').value.trim().toUpperCase();
@@ -71,27 +69,52 @@ document.getElementById('join-btn').addEventListener('click', () => {
         set(ref(db, `rooms/${room}/status`), "lobby");
     }
 
-    document.getElementById('display-room-code').textContent = room;
+    document.getElementById('display-room-code').textContent = room; 
 
-    // ECOUTES CENTRALISÉES (Chaque changement relance l'affichage complet pour éviter les bugs)
+    // ECOUTES CENTRALISÉES
     onValue(ref(db, `rooms/${room}/status`), snap => { 
         let val = snap.val();
-        isGameActive = (val === "role_reveal" || val === "started");
-        masterRender();
+        if (val === "lobby" || !val) {
+            isGameActive = false;
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('lobby-screen').classList.add('active');
+            document.getElementById('display-room-code').textContent = currentRoom; 
+            document.getElementById('vote-zone').style.display = "none";
+            document.getElementById('night-cover').style.display = "none";
+            document.getElementById('admin-auto-bar').style.display = "none";
+            if(document.getElementById('lobby-screen').classList.contains('active')) updateLobby();
+        } else {
+            isGameActive = true;
+            masterRender();
+        }
     });
+
     onValue(ref(db, `rooms/${room}/mode`), snap => { gameMode = snap.val() || "auto"; masterRender(); });
-    onValue(ref(db, `rooms/${room}/adminId`), snap => { adminIdGlobal = snap.val(); amIAdmin = (adminIdGlobal === myPlayerId); masterRender(); });
     onValue(ref(db, `rooms/${room}/narratorId`), snap => { amINarrator = (snap.val() === myPlayerId); masterRender(); });
     onValue(ref(db, `rooms/${room}/gameState`), snap => { gameState = snap.val() || {}; masterRender(); });
     onValue(ref(db, `rooms/${room}/autoState`), snap => { autoState = snap.val() || {}; masterRender(); });
-    onValue(ref(db, `rooms/${room}/votes`), snap => { currentVotes = snap.val() || {}; masterRender(); });
+    
+    onValue(ref(db, `rooms/${room}/adminId`), snap => { 
+        adminIdGlobal = snap.val(); 
+        amIAdmin = (adminIdGlobal === myPlayerId); 
+        document.getElementById('admin-panel').style.display = amIAdmin ? "block" : "none";
+        document.getElementById('waiting-msg').style.display = amIAdmin ? "none" : "block";
+        updateLobby(); 
+        masterRender(); 
+    });
     
     onValue(ref(db, `rooms/${room}/players`), snap => {
         currentPlayers = snap.val() || {};
         if (!currentPlayers[myPlayerId] && document.getElementById('lobby-screen').classList.contains('active')) {
             alert("Vous avez été expulsé."); location.reload();
         }
+        if(document.getElementById('lobby-screen').classList.contains('active')) updateLobby();
         masterRender();
+    });
+
+    onValue(ref(db, `rooms/${room}/votes`), snap => {
+        currentVotes = snap.val() || {};
+        masterRender(); 
     });
 });
 
@@ -201,63 +224,38 @@ let currentHumainPhaseRendered = "";
 let currentNarratorPhaseRendered = "";
 
 function masterRender() {
-    if (!currentRoom) return; 
-
-    // 3.1. ECRAN LOBBY
-    if (!isGameActive) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById('lobby-screen').classList.add('active');
-        document.getElementById('admin-panel').style.display = amIAdmin ? "block" : "none";
-        document.getElementById('waiting-msg').style.display = amIAdmin ? "none" : "block";
-        document.getElementById('vote-zone').style.display = "none";
-        document.getElementById('night-cover').style.display = "none";
-        document.getElementById('admin-auto-bar').style.display = "none";
-        updateLobby();
-        return;
-    }
+    if (!currentRoom || !isGameActive) return; 
 
     let currentPhase = (gameMode === "auto") ? autoState.phase : gameState.phase;
     if (!currentPhase) return; 
 
-    // 3.2. ECRAN MORT
-    if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead) {
-        let isChasseurTurn = (gameMode === "auto" && currentPhase === "chasseur" && !autoState.chasseurA_Tire) || 
-                             (gameMode === "humain" && currentPhase === "chasseur" && !gameState.chasseurA_Tire);
-        if (!(currentPlayers[myPlayerId].role === "🔫 Chasseur" && isChasseurTurn)) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('dead-screen').classList.add('active');
-            return;
-        }
-    }
+    let targetScreen = "game-screen";
+    let isChasseurTurn = (gameMode === "auto" && currentPhase === "chasseur" && !autoState.chasseurA_Tire) || 
+                         (gameMode === "humain" && currentPhase === "chasseur" && !gameState.chasseurA_Tire);
 
-    // 3.3. ECRAN FIN DE PARTIE
     if (currentPhase === "endgame") {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById('endgame-screen').classList.add('active');
-        document.getElementById('endgame-winner').textContent = (gameMode === "auto") ? autoState.winnerMsg : gameState.winnerMsg;
-        document.getElementById('night-cover').style.display = "none";
-        return;
+        targetScreen = "endgame-screen";
+    } else if (currentPlayers[myPlayerId] && currentPlayers[myPlayerId].isDead && !(currentPlayers[myPlayerId].role === "🔫 Chasseur" && isChasseurTurn)) {
+        targetScreen = "dead-screen";
+    } else if (gameMode === "humain" && amINarrator) {
+        targetScreen = "narrator-screen";
     }
 
-    // 3.4. ECRAN NARRATEUR (HUMAIN)
-    if (gameMode === "humain" && amINarrator) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById('narrator-screen').classList.add('active');
+    document.querySelectorAll('.screen').forEach(s => { if (s.id !== targetScreen) s.classList.remove('active'); });
+    document.getElementById(targetScreen).classList.add('active');
+
+    if (targetScreen === "endgame-screen") {
+        document.getElementById('night-cover').style.display = 'none';
+        document.getElementById('endgame-winner').textContent = gameMode === "auto" ? autoState.winnerMsg : gameState.winnerMsg;
+    } else if (targetScreen === "narrator-screen") {
         renderNarratorUI();
-    } 
-    // 3.5. ECRAN JOUEUR
-    else {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById('game-screen').classList.add('active');
-        if(currentPlayers[myPlayerId]) document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId].role;
-        
+    } else if (targetScreen === "game-screen") {
+        document.getElementById('my-role-display').textContent = currentPlayers[myPlayerId]?.role || "???";
         if (gameMode === "auto") {
             if (amIAdmin) {
                 document.getElementById('admin-auto-bar').style.display = "flex";
                 document.getElementById('vote-progress').textContent = `${Object.keys(currentVotes).length} action(s)`;
-            } else {
-                document.getElementById('admin-auto-bar').style.display = "none";
-            }
+            } else document.getElementById('admin-auto-bar').style.display = "none";
             handleAutoPhase();
         } else {
             document.getElementById('admin-auto-bar').style.display = "none";
@@ -284,13 +282,15 @@ function handleAutoPhase() {
         }
     }
 
-    // Visibilité commune
     let isNight = ["nuit", "cupidon", "voyante", "loups", "sorciere"].includes(pName);
     nightCover.style.display = isNight ? 'flex' : 'none';
     dayAnnounce.style.display = ["jour", "resultat_election", "resultat_chasseur", "resultat_village"].includes(pName) ? 'block' : 'none';
-    voteZone.style.display = ["cupidon", "voyante", "loups", "sorciere", "election_maire", "chasseur", "vote_village"].includes(pName) && !currentPlayers[myPlayerId]?.isDead ? 'block' : 'none';
 
-    // Rendu Unique par phase (empêche de supprimer les sélections de votes)
+    let canVote = false;
+    if (!currentPlayers[myPlayerId]?.isDead && ["cupidon", "voyante", "loups", "sorciere", "election_maire", "vote_village"].includes(pName)) canVote = true;
+    if (pName === "chasseur" && currentPlayers[myPlayerId]?.role === "🔫 Chasseur") canVote = true; // Chasseur vote mort
+    voteZone.style.display = canVote ? 'block' : 'none';
+
     if (currentAutoPhaseRendered !== pName) {
         currentAutoPhaseRendered = pName;
         document.getElementById('my-vote-status').textContent = "";
@@ -362,7 +362,8 @@ function handleAutoPhase() {
     }
 }
 
-document.getElementById('btn-next-phase').addEventListener('click', () => {
+document.getElementById('btn-next-phase').addEventListener('click', (e) => {
+    e.target.disabled = true; setTimeout(() => { if(e.target) e.target.disabled = false; }, 1500); // Anti-spam double clic
     if (gameMode === "auto") advanceAutoPhase();
 });
 
@@ -475,6 +476,7 @@ function renderPlayerUIHumain() {
     let isNight = ["nuit_debut", "cupidon", "voyante", "loups", "sorciere", "nuit_fin"].includes(gameState.phase);
     nightCover.style.display = isNight ? "flex" : "none";
 
+    // Gestion de l'affichage unique (éviter le clignotement)
     if (currentHumainPhaseRendered !== gameState.phase) {
         currentHumainPhaseRendered = gameState.phase;
         voteZone.style.display = "none"; dayAnnounce.style.display = "none";
@@ -483,13 +485,17 @@ function renderPlayerUIHumain() {
         if (["jour", "resultat_village", "resultat_chasseur", "resultat_election"].includes(gameState.phase)) {
             dayAnnounce.style.display = "block";
             if (gameState.phase === "resultat_election") {
-                let mName = (gameState.maireId && gameState.maireId !== "none") ? currentPlayers[gameState.maireId].name : "Personne";
-                dayAnnounce.textContent = `Le nouveau Maire est ${mName} !`;
+                let mName = (gameState.maireId && gameState.maireId !== "none") ? currentPlayers[gameState.maireId]?.name : "Personne";
+                dayAnnounce.textContent = `Le nouveau Maire est ${mName || "Personne"} !`;
             } else { dayAnnounce.textContent = annoncerMortsUI(gameState); }
         }
 
-        if (["vote_village", "chasseur", "election_maire"].includes(gameState.phase) && !currentPlayers[myPlayerId].isDead) {
-            if (gameState.phase === "chasseur" && currentPlayers[myPlayerId].role !== "🔫 Chasseur") return; 
+        // LE CORRECTIF POUR LE CHASSEUR EST ICI !
+        let canVote = false;
+        if (!currentPlayers[myPlayerId]?.isDead && (gameState.phase === "vote_village" || gameState.phase === "election_maire")) canVote = true;
+        if (gameState.phase === "chasseur" && currentPlayers[myPlayerId]?.role === "🔫 Chasseur") canVote = true; // Le chasseur vote MORT
+
+        if (canVote) {
             voteZone.style.display = "block";
             let title = "🗳️ Vote du Village";
             if (gameState.phase === "chasseur") title = "🔫 Ultimatum";
@@ -502,7 +508,6 @@ function renderPlayerUIHumain() {
 
 function renderNarratorUI() {
     renderNarratorPlayerList(); 
-    
     const actionBox = document.getElementById('narrator-action-area');
     const scriptBox = document.getElementById('narrator-script');
     const nextBtn = document.getElementById('btn-narrator-next');
@@ -511,7 +516,13 @@ function renderNarratorUI() {
     if (currentNarratorPhaseRendered !== gameState.phase) {
         currentNarratorPhaseRendered = gameState.phase;
         actionBox.innerHTML = ""; revoteBtn.style.display = "none";
-        nextBtn.textContent = "Suivant ➡️"; nextBtn.onclick = handleNarratorNext;
+        nextBtn.textContent = "Suivant ➡️"; 
+        
+        // Anti double-clic très important pour le Narrateur Humain
+        nextBtn.onclick = (e) => {
+            e.target.disabled = true; setTimeout(() => { if(e.target) e.target.disabled = false; }, 1500);
+            handleNarratorNext();
+        };
 
         switch(gameState.phase) {
             case "nuit_debut":
@@ -564,12 +575,15 @@ function renderNarratorUI() {
         let counts = {};
         for(let voter in currentVotes) { 
             let t = currentVotes[voter]; 
-            if(t !== "skip") {
-                let weight = (voter === gameState.maireId) ? 2 : 1;
+            if(typeof t === 'string' && t !== "skip" && t !== "none") {
+                let weight = (gameState.maireId === voter) ? 2 : 1;
                 counts[t] = (counts[t] || 0) + weight;
             }
         }
-        for(let t in counts) voteHtml += `<li>${currentPlayers[t]?.name} : ${counts[t]} voix</li>`;
+        for(let t in counts) {
+            let p = currentPlayers[t];
+            if (p) voteHtml += `<li>${p.name} : ${counts[t]} voix</li>`;
+        }
         document.getElementById('narrator-action-area').innerHTML = voteHtml + `</ul>`;
     }
 }
@@ -631,8 +645,9 @@ function handleNarratorNext() {
     else if (p === "resultat_election") next = "vote_village";
     else if (p === "vote_village") {
         let highest = getHighestVotedId(gameState);
-        if(highest && highest !== "skip") { applyDeathsAndMayor([highest], gameState, updates, "gameState"); newLog += `\n⚖️ Village a tué ${currentPlayers[highest].name}.`; } 
-        else updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        if(highest && highest !== "skip" && highest !== "none") { 
+            applyDeathsAndMayor([highest], gameState, updates, "gameState"); newLog += `\n⚖️ Village a tué ${currentPlayers[highest].name}.`; 
+        } else updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
         next = "resultat_village";
     }
     else if (p === "resultat_village") {
@@ -642,9 +657,11 @@ function handleNarratorNext() {
         } else { next = "nuit_debut"; updates[`rooms/${currentRoom}/gameState/dayCount`] = (gameState.dayCount || 1) + 1; updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"]; }
     }
     else if (p === "chasseur") {
-        updates[`rooms/${currentRoom}/gameState/chasseurA_Tire`] = true; let highest = getHighestVotedId(gameState);
-        if(highest && highest !== "skip") { applyDeathsAndMayor([highest], gameState, updates, "gameState"); newLog += `\n🔫 Chasseur a tué ${currentPlayers[highest].name}.`; } 
-        else updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
+        updates[`rooms/${currentRoom}/gameState/chasseurA_Tire`] = true;
+        let highest = getHighestVotedId(gameState);
+        if(highest && highest !== "skip" && highest !== "none") { 
+            applyDeathsAndMayor([highest], gameState, updates, "gameState"); newLog += `\n🔫 Chasseur a tué ${currentPlayers[highest].name}.`; 
+        } else updates[`rooms/${currentRoom}/gameState/lastDeaths`] = ["none"];
         next = "resultat_chasseur";
     }
     else if (p === "resultat_chasseur") next = gameState.nextPhaseAfterChasseur;
@@ -655,7 +672,7 @@ function handleNarratorNext() {
     } else updates[`rooms/${currentRoom}/gameState/phase`] = next;
 
     updates[`rooms/${currentRoom}/gameState/nightLog`] = newLog; updates[`rooms/${currentRoom}/votes`] = null; 
-    update(ref(db), updates);
+    update(ref(db), updates).catch(err => alert("Erreur serveur: " + err));
 }
 
 function renderNarratorPlayerList() {
@@ -672,7 +689,7 @@ function renderNarratorPlayerList() {
 }
 
 // ==========================================
-// UTILITAIRES PARTAGES
+// UTILITAIRES PARTAGES (Sécurisés au max)
 // ==========================================
 function generateSelectAlive(id, label, defaultOpt = "Personne") {
     let html = `<label>${label}</label><select id="${id}" style="width:100%; margin-bottom:10px; padding:10px;"><option value="none">${defaultOpt}</option>`;
@@ -683,12 +700,16 @@ function generateSelectAlive(id, label, defaultOpt = "Personne") {
 }
 
 function getHighestVotedId(stateObj) {
-    if (!currentVotes || Object.keys(currentVotes).length === 0) return null;
-    const counts = {};
+    if (!currentVotes || typeof currentVotes !== "object") return null;
+    let counts = {};
     for (let voter in currentVotes) {
         let val = currentVotes[voter];
-        if (typeof val === "string" && val !== "skip") {
-            let weight = (stateObj && voter === stateObj.maireId) ? 2 : 1;
+        if (!val || val === "none" || val === "skip") continue;
+        if (typeof val === "object" && val.kill) val = val.kill; 
+        if (Array.isArray(val)) val = val[0]; 
+
+        if (typeof val === "string" && val !== "none" && val !== "skip") {
+            let weight = (stateObj && stateObj.maireId === voter) ? 2 : 1;
             counts[val] = (counts[val] || 0) + weight;
         }
     }
@@ -770,6 +791,9 @@ function annoncerMortsUI(stateObj) {
     return text;
 }
 
+// ==========================================
+// RENDER BOUTONS VOTE JOUEURS
+// ==========================================
 function renderPlayerVoteButtonsCommon(type, stateObj) {
     const list = document.getElementById('vote-list'); const witchUI = document.getElementById('witch-options');
     list.innerHTML = ""; witchUI.style.display = "none"; selectedTargetIds = [];
