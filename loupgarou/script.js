@@ -41,9 +41,7 @@ function parler(texte, phase) {
     }
 }
 
-// ==========================================
 // 1. REJOINDRE LE SALON ET ECOUTES GLOBALES
-// ==========================================
 document.getElementById('join-btn').addEventListener('click', () => {
     let rawName = document.getElementById('player-name').value.trim();
     const room = document.getElementById('room-code').value.trim().toUpperCase();
@@ -73,7 +71,6 @@ document.getElementById('join-btn').addEventListener('click', () => {
 
     document.getElementById('display-room-code').textContent = room; 
 
-    // ECOUTES CENTRALISÉES
     onValue(ref(db, `rooms/${room}/status`), snap => { 
         let val = snap.val();
         if (val === "lobby" || !val) {
@@ -156,7 +153,7 @@ function updateLobby() {
 }
 
 // ==========================================
-// 2. LANCER LE JEU (AVEC LE CORRRECTIF)
+// 2. LANCER LE JEU
 // ==========================================
 document.getElementById('start-game-btn').addEventListener('click', () => {
     const mode = document.getElementById('game-mode').value;
@@ -183,13 +180,12 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
 
     let updates = {};
 
-    // 🌟 LE GRAND CORRECTIF EST ICI : On ressuscite tout le monde ! 🌟
+    // 🌟 LE GRAND CORRECTIF : On nettoie et ressuscite tout le monde ! 🌟
     allIds.forEach(id => {
         updates[`rooms/${currentRoom}/players/${id}/isDead`] = false;
-        updates[`rooms/${currentRoom}/players/${id}/role`] = "🧑‍🌾 Simple Villageois"; // Nettoyage de rôle
+        updates[`rooms/${currentRoom}/players/${id}/role`] = "🧑‍🌾 Simple Villageois";
     });
 
-    // Puis on assigne les vrais rôles
     playersToAssign.forEach((id, i) => updates[`rooms/${currentRoom}/players/${id}/role`] = rolesPool[i]);
     
     updates[`rooms/${currentRoom}/mode`] = mode;
@@ -208,14 +204,14 @@ document.getElementById('start-game-btn').addEventListener('click', () => {
         updates[`rooms/${currentRoom}/narratorId`] = narratorId;
         updates[`rooms/${currentRoom}/players/${narratorId}/role`] = "🗣️ Narrateur";
         updates[`rooms/${currentRoom}/gameState`] = { ...defaultState, phase: "nuit_debut", nightLog: "" };
-        updates[`rooms/${currentRoom}/autoState`] = null; // Effacer le mode Auto pour éviter les bugs
+        updates[`rooms/${currentRoom}/autoState`] = null;
     } else {
         updates[`rooms/${currentRoom}/narratorId`] = null;
         updates[`rooms/${currentRoom}/autoState`] = { 
             ...defaultState, phase: "nuit", 
             witchActsIfAttacked: document.getElementById('rule-witch-attacked').checked 
         };
-        updates[`rooms/${currentRoom}/gameState`] = null; // Effacer le mode Humain pour éviter les bugs
+        updates[`rooms/${currentRoom}/gameState`] = null;
     }
     
     updates[`rooms/${currentRoom}/status`] = "started"; 
@@ -287,6 +283,11 @@ function handleAutoPhase() {
     const voteZone = document.getElementById('vote-zone');
     const voteSubtitle = document.getElementById('vote-subtitle');
 
+    // Réinitialisation par défaut
+    nightCover.style.display = 'none';
+    dayAnnounce.style.display = 'none';
+    voteZone.style.display = 'none';
+
     if (autoState.lovers && autoState.lovers.includes(myPlayerId)) {
         let otherLoverId = autoState.lovers.find(id => id !== myPlayerId);
         if (currentPlayers[otherLoverId]) {
@@ -295,74 +296,111 @@ function handleAutoPhase() {
         }
     }
 
-    let isNight = ["nuit", "cupidon", "voyante", "loups", "sorciere"].includes(pName);
-    nightCover.style.display = isNight ? 'flex' : 'none';
-    dayAnnounce.style.display = ["jour", "resultat_election", "resultat_chasseur", "resultat_village"].includes(pName) ? 'block' : 'none';
+    let myRole = currentPlayers[myPlayerId]?.role;
+    let amIDead = currentPlayers[myPlayerId]?.isDead;
 
-    let canVote = false;
-    if (!currentPlayers[myPlayerId]?.isDead && ["cupidon", "voyante", "loups", "sorciere", "election_maire", "vote_village"].includes(pName)) canVote = true;
-    if (pName === "chasseur" && currentPlayers[myPlayerId]?.role === "🔫 Chasseur") canVote = true; 
-    
-    if (canVote) voteZone.style.display = 'block';
-    else voteZone.style.display = 'none';
+    let isNightPhase = ["nuit", "cupidon", "voyante", "loups", "sorciere"].includes(pName);
+    let isDayPhase = ["jour", "resultat_election", "resultat_chasseur", "resultat_village"].includes(pName);
 
+    if (isDayPhase) {
+        dayAnnounce.style.display = 'block';
+    }
+
+    // Qui a le droit de jouer ? (Le filtre magique)
+    let isMyTurn = false;
+    if (!amIDead) {
+        if (pName === "cupidon" && myRole === "🏹 Cupidon") isMyTurn = true;
+        if (pName === "voyante" && myRole === "👁️ Voyante") isMyTurn = true;
+        if (pName === "loups" && myRole === "🐺 Loup-Garou") isMyTurn = true;
+        if (pName === "sorciere" && myRole === "🧙‍♀️ Sorcière") {
+            if (autoState.wolfVictim === myPlayerId && !autoState.witchActsIfAttacked) isMyTurn = false;
+            else isMyTurn = true;
+        }
+        if (pName === "election_maire" || pName === "vote_village") isMyTurn = true;
+    }
+    if (pName === "chasseur" && myRole === "🔫 Chasseur") isMyTurn = true; // Chasseur tire même mort
+
+    // Cacher l'écran des autres pendant la nuit
+    if (isNightPhase && !isMyTurn) {
+        nightCover.style.display = 'flex';
+    }
+
+    if (isMyTurn) {
+        voteZone.style.display = 'block';
+    }
+
+    // Gestion du texte et des actions
     if (currentAutoPhaseRendered !== pName) {
         currentAutoPhaseRendered = pName;
         document.getElementById('my-vote-status').textContent = "";
         
         if (pName === "nuit") parler("La nuit tombe sur le village.", pName);
-        else if (pName === "cupidon" && canVote) {
+        else if (pName === "cupidon") {
             parler("Cupidon désigne deux amoureux.", pName);
-            document.getElementById('vote-title').textContent = "🏹 Formez le couple";
-            voteSubtitle.textContent = "Sélectionnez 2 joueurs."; renderPlayerVoteButtonsCommon("cupidon", autoState, pName);
+            if (isMyTurn) {
+                document.getElementById('vote-title').textContent = "🏹 Formez le couple";
+                voteSubtitle.textContent = "Sélectionnez 2 joueurs."; renderPlayerVoteButtonsCommon("cupidon", autoState, pName);
+            }
         }
-        else if (pName === "voyante" && canVote) {
-            parler("La voyante choisit un joueur.", pName);
-            document.getElementById('vote-title').textContent = "👁️ Choisis qui inspecter";
-            voteSubtitle.textContent = "Son rôle secret s'affichera ici."; renderPlayerVoteButtonsCommon("voyante", autoState, pName);
+        else if (pName === "voyante") {
+            parler("La voyante choisit un joueur à inspecter.", pName);
+            if (isMyTurn) {
+                document.getElementById('vote-title').textContent = "👁️ Choisis qui inspecter";
+                voteSubtitle.textContent = "Son rôle secret s'affichera ici."; renderPlayerVoteButtonsCommon("voyante", autoState, pName);
+            }
         }
-        else if (pName === "loups" && canVote) {
+        else if (pName === "loups") {
             parler("Les loups-garous choisissent leur victime.", pName);
-            document.getElementById('vote-title').textContent = "🐺 Cible de la Meute";
-            voteSubtitle.textContent = "Mettez-vous d'accord !"; renderPlayerVoteButtonsCommon("loups", autoState, pName);
+            if (isMyTurn) {
+                document.getElementById('vote-title').textContent = "🐺 Cible de la Meute";
+                voteSubtitle.textContent = "Mettez-vous d'accord !"; renderPlayerVoteButtonsCommon("loups", autoState, pName);
+            }
         }
-        else if (pName === "sorciere" && canVote) {
+        else if (pName === "sorciere") {
             parler("La sorcière se réveille.", pName);
-            if (autoState.wolfVictim === myPlayerId && !autoState.witchActsIfAttacked) {
-                dayAnnounce.style.display = "block"; voteZone.style.display = 'none';
-                dayAnnounce.textContent = "🩸 Les loups t'ont attaquée ! Tu es trop faible pour tes potions.";
-                set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), "skip"); 
-            } else {
-                document.getElementById('vote-title').textContent = "🧙‍♀️ Tes Potions";
-                voteSubtitle.textContent = ""; renderPlayerVoteButtonsCommon("sorciere", autoState, pName);
+            if (myRole === "🧙‍♀️ Sorcière" && !amIDead) {
+                if (autoState.wolfVictim === myPlayerId && !autoState.witchActsIfAttacked) {
+                    dayAnnounce.style.display = "block"; voteZone.style.display = 'none'; nightCover.style.display = 'none';
+                    dayAnnounce.textContent = "🩸 Les loups t'ont attaquée ! Tu es trop faible pour tes potions.";
+                    set(ref(db, `rooms/${currentRoom}/votes/${myPlayerId}`), "skip"); 
+                } else if (isMyTurn) {
+                    document.getElementById('vote-title').textContent = "🧙‍♀️ Tes Potions";
+                    voteSubtitle.textContent = ""; renderPlayerVoteButtonsCommon("sorciere", autoState, pName);
+                }
             }
         }
         else if (pName === "jour" || pName === "resultat_village") {
             let txt = annoncerMortsUI(autoState); dayAnnounce.textContent = txt;
             parler((pName === "jour" ? "Le soleil se lève. " : "") + txt, pName);
         }
-        else if (pName === "election_maire" && canVote) {
-            document.getElementById('vote-title').textContent = "🎖️ Élection du Maire";
-            voteSubtitle.textContent = "Votez pour le joueur de votre choix."; renderPlayerVoteButtonsCommon("election_maire", autoState, pName);
+        else if (pName === "election_maire") {
             parler("C'est l'heure d'élire le maire du village.", pName);
+            if (isMyTurn) {
+                document.getElementById('vote-title').textContent = "🎖️ Élection du Maire";
+                voteSubtitle.textContent = "Votez pour le joueur de votre choix."; renderPlayerVoteButtonsCommon("election_maire", autoState, pName);
+            }
         }
         else if (pName === "resultat_election") {
             let mName = (autoState.maireId && autoState.maireId !== "none") ? currentPlayers[autoState.maireId].name : "Personne";
             let txt = `Le nouveau Maire est ${mName} ! Son vote compte double.`;
             dayAnnounce.textContent = txt; parler(txt, pName);
         }
-        else if (pName === "chasseur" && canVote) {
+        else if (pName === "chasseur") {
             parler("Le chasseur est mort ! Il a un dernier tir.", pName);
-            document.getElementById('vote-title').textContent = "🔫 Ultimatum du Chasseur";
-            voteSubtitle.textContent = "Tire sur quelqu'un avant de partir !"; renderPlayerVoteButtonsCommon("chasseur", autoState, pName);
+            if (isMyTurn) {
+                document.getElementById('vote-title').textContent = "🔫 Ultimatum du Chasseur";
+                voteSubtitle.textContent = "Tire sur quelqu'un avant de partir !"; renderPlayerVoteButtonsCommon("chasseur", autoState, pName);
+            }
         }
         else if (pName === "resultat_chasseur") {
             let txt = annoncerMortsUI(autoState); dayAnnounce.textContent = txt; parler(txt, pName);
         }
-        else if (pName === "vote_village" && canVote) {
-            document.getElementById('vote-title').textContent = "🗳️ Tribunal du Village";
-            voteSubtitle.textContent = "Votez pour éliminer un suspect."; renderPlayerVoteButtonsCommon("village", autoState, pName);
+        else if (pName === "vote_village") {
             parler("C'est l'heure du vote.", pName);
+            if (isMyTurn) {
+                document.getElementById('vote-title').textContent = "🗳️ Tribunal du Village";
+                voteSubtitle.textContent = "Votez pour éliminer un suspect."; renderPlayerVoteButtonsCommon("village", autoState, pName);
+            }
         }
     }
 }
@@ -375,7 +413,7 @@ document.getElementById('btn-next-phase').addEventListener('click', (e) => {
 function getWolfConsensusAuto() {
     let wolfCount = 0;
     for(let id in currentPlayers) { if (currentPlayers[id].role === "🐺 Loup-Garou" && !currentPlayers[id].isDead) wolfCount++; }
-    if (wolfCount === 0) return "none"; // Sécurité anti-crash
+    if (wolfCount === 0) return "none"; // Sécurité
     let votes = Object.values(currentVotes);
     if (votes.length < wolfCount) return "not_enough";
     let first = votes[0];
@@ -407,7 +445,7 @@ function advanceAutoPhase() {
     else if (phase === "loups") {
         let victim = getWolfConsensusAuto();
         if (victim === "not_enough" || victim === "no_consensus") {
-            if(!confirm("Les loups n'ont pas tous voté pareil. Forcer le passage ? (Personne ne meurt)")) return;
+            if(!confirm("Les loups n'ont pas encore tous voté pareil. Forcer le passage ? (Personne ne mourra)")) return;
             victim = "none";
         }
         updates[`rooms/${currentRoom}/autoState/wolfVictim`] = victim;
@@ -693,9 +731,17 @@ function renderNarratorPlayerList() {
 // ==========================================
 // UTILITAIRES PARTAGES
 // ==========================================
+function generateSelectAlive(id, label, defaultOpt = "Personne") {
+    let html = `<label>${label}</label><select id="${id}" style="width:100%; margin-bottom:10px; padding:10px;"><option value="none">${defaultOpt}</option>`;
+    for (let pid in currentPlayers) {
+        if (!currentPlayers[pid].isDead && pid !== myPlayerId && currentPlayers[pid].role !== "🗣️ Narrateur") html += `<option value="${pid}">${currentPlayers[pid].name} (${currentPlayers[pid].role})</option>`;
+    }
+    return html + `</select>`;
+}
+
 function getHighestVotedId(stateObj) {
     if (!currentVotes || typeof currentVotes !== "object") return null;
-    const counts = {};
+    let counts = {};
     for (let voter in currentVotes) {
         let val = currentVotes[voter];
         if (!val || val === "none" || val === "skip") continue;
